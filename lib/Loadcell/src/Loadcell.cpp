@@ -2,6 +2,9 @@
 
 #include <RunningMedian.h>
 
+#include <DataEvent.hpp>
+using namespace esp32m;
+
 #define AVG_SIZE 8
 
 namespace Loadcell
@@ -52,6 +55,37 @@ namespace Loadcell
         Serial.println(myScale.getZeroOffset());
         Serial.print("Calibration factor: ");
         Serial.println(myScale.getCalibrationFactor());
+
+        // register events
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("Loadcell/setCalibrationFactor"))
+            {
+                Serial.println("Loadcell/setCalibrationFactor");
+                Serial.println(((DataEvent *)ev)->data());
+
+                cmdSetCalibrationFactor(((DataEvent *)ev)->data().toFloat());
+            } });
+
+        // commands
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("Loadcell/tare"))
+            {
+                Serial.println("Loadcell/tare");
+
+                cmdTare();
+            } });
+
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("Loadcell/calibrateByWeight"))
+            {
+                Serial.println("Loadcell/calibrateByWeight");
+                Serial.println(((DataEvent *)ev)->data());
+
+                cmdCalcCalibrationFactor(((DataEvent *)ev)->data().toFloat());
+        } });
     }
 
     // getter for external readout
@@ -80,6 +114,10 @@ namespace Loadcell
         // step 3: calc cal factor
         myScale.calculateCalibrationFactor(weightOnScale);
         // step 4: store cal factor
+    }
+    void cmdSetCalibrationFactor(float factor)
+    {
+        myScale.setCalibrationFactor(factor);
     }
     void cmdInternalCalibration()
     {

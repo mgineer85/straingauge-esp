@@ -23,19 +23,4 @@ namespace Webservice
 
     void invokeSendEvent(String event, String value);
 
-    /// The Actions.
-    ///
-    enum Actions : uint8_t
-    {
-        Tare,
-        LoadPersistPrefs, // TODO
-        SavePersistPrefs, // TODO
-        CalibrateFactor,
-    };
-    /// The callback function.
-    ///
-    typedef void (*Function)();
-    /// Set a callback if the given action is requested
-    ///
-    void setCallback(Actions action, Function fn);
 }

@@ -69,20 +69,16 @@
         }
         
         function cmd(_action) {
-                let url = '/api/cmd';
-                
-                fetch(url, {
-                    body: new FormData().append('action',_action),
+                const formData = new FormData();
+                formData.append('action',_action);
+                fetch('/api/cmd', {
+                    body: formData,
                     method: "POST"
                 })
                 .then((response) => {
                     if (response.status === 200) {
                     console.log(response);
                     }
-                })
-                .then((response) => {
-                    console.debug(response);
-                    // …
                 }).catch((error) => {
                     console.error(error);
                 });
@@ -102,12 +98,29 @@
     <div>Weight: <span id="weight">xxx</span> kg</div>
     <div>Force: <span id="force">xxx</span> N</div>
     <div>Ping: <span id="ping">xxx</span></div>
-    <a href="javascript:getWifiInfo();">getWifiInfo</a><br>
+    
     <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
         <input hidden name="action" value="tare">
-        <input type="submit">    
+        <input type="submit" value="Tare">    
     </form>
-    <a href="javascript:cmd('tare');">Tare</a>
+    <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
+        <input hidden name="action" value="calibrateByWeight">
+        <input type="number" name="knownWeight" value="">
+        <input type="submit" value="calibrate to weight">
+    </form>
+    <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
+        <input hidden name="action" value="setCalibrationFactor">
+        <input type="number" name="calibrationFactor" value="">
+        <input type="submit" value="set calibration factor">
+    </form>
+    
+    <br>
+    <a href="javascript:getWifiInfo();">getWifiInfo</a><br>
+    <a href="javascript:cmd('tare');">Tare</a><br>
+    <a href="javascript:cmd('savePreferences');">savePreferences</a><br>
+    <a href="javascript:cmd('loadPreferences');">loadPreferences</a><br>
+
+
     <ul id="list"><li>first entry</li></ul>
     html content
 </body>

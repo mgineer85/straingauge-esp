@@ -54,38 +54,23 @@ namespace Display
     {
         display.clearDisplay();
 
-        // reading
-        display.setTextSize(1);  // Normal 1:1 pixel scale
-        display.setCursor(0, 0); // Start at top-left corner
-        display.print("READ");
-
-        // bat
-        display.setTextSize(1);        // Normal 1:1 pixel scale
-        display.setCursor(0, 32 - 16); // Start at top-left corner
-        display.print("BAT[%]");
-
         // force
-        display.setTextSize(1);    // Normal 1:1 pixel scale
-        display.setCursor(50, 16); // Start at top-left corner
-        display.print("force [N]");
+        display.setTextSize(2);  // Normal 1:1 pixel scale
+        display.setCursor(0, 8); // Start at top-left corner
+        display.print("F=");
+
+        // N
+        display.setTextSize(1);         // Normal 1:1 pixel scale
+        display.setCursor(100, 32 - 8); // Start at top-left corner
+        display.print("[N]");
     }
 
     void update_loop()
     {
-        // reading
-        display.setTextSize(1);        // Normal 1:1 pixel scale
-        display.setCursor(0, 32 - 24); // Start at top-left corner
-        display.print(_reading);
-
-        // 55%
-        display.setTextSize(1);        // Normal 1:1 pixel scale
-        display.setCursor(00, 32 - 8); // Start at top-left corner
-        display.print(_battery);
-
         // force
-        display.setTextSize(2);   // Normal 1:1 pixel scale
-        display.setCursor(50, 0); // Start at top-left corner
-        display.printf("%4.1f", _force);
+        display.setTextSize(3);   // Normal 1:1 pixel scale
+        display.setCursor(20, 0); // Start at top-left corner
+        display.printf("%5.0f", _force);
 
         display.display();
     }

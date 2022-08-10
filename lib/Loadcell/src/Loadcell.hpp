@@ -26,6 +26,7 @@ namespace Loadcell
     // commands triggered externally
     void cmdTare();
     void cmdCalcCalibrationFactor(float weightOnScale);
+    void cmdSetCalibrationFactor(float factor);
     void cmdInternalCalibration();
     void cmdPersistPreferences();
 }

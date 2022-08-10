@@ -1,8 +1,7 @@
 #include <Webservice.hpp>
 #include <ArduinoJson.h>
 #include "SPIFFS.h"
-#include <events.hpp>
-
+#include <DataEvent.hpp>
 using namespace esp32m;
 
 namespace Webservice
@@ -15,19 +14,6 @@ namespace Webservice
 
     const char *PARAM_MESSAGE = "message";
 
-    // modular pattern from here: https://github.com/LuckyResistor/guide-modular-firmware/blob/master/fade_demo_08/fade_demo_08.ino
-    // maybe there is better, but works for now.
-    const Actions cActions[] = {
-        Tare,
-        LoadPersistPrefs,
-        SavePersistPrefs,
-        CalibrateFactor};
-    Function gCallback[4];
-    void setCallback(Actions action, Function fn)
-    {
-        gCallback[static_cast<uint8_t>(action)] = fn;
-    }
-
     void notFound(AsyncWebServerRequest *request)
     {
         request->send(404, "text/plain", "Not found");
@@ -35,16 +21,6 @@ namespace Webservice
 
     void initialize()
     {
-        // null callbacks on init
-        memset(gCallback, 0, sizeof gCallback);
-
-        EventManager::instance().subscribe([](Event *ev)
-                                           {
-    if (ev->is("notify"))
-    {
-      Serial.println("notified!");
-    } });
-
         WiFi.mode(WIFI_STA);
         WiFi.begin(ssid, password);
         if (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -83,30 +59,66 @@ namespace Webservice
         server.on("/api/cmd", HTTP_POST, [](AsyncWebServerRequest *request)
                   {
             String action;
-            if (request->hasParam("action", true)) {
+            if (request->hasParam("action", true))
+            {
                 action = request->getParam("action", true)->value();
-            } else {
-                action = "invalid action! -> send 404!? or other error";
             }
-            Serial.print("received cmd: ");
+            else
+            {
+                request->send(400, "text/plain", "action missing");
+                return;
+            }
+            Serial.print("received cmd action: ");
             Serial.println(action);
 
-            if(action=="tare") {
-                if (gCallback[Actions::Tare] != nullptr)
-                {
-                    gCallback[Actions::Tare]();
-                }
-            } else if(action=="calibratefactor") {
-                if (gCallback[Actions::CalibrateFactor] != nullptr)
-                {
-                    gCallback[Actions::CalibrateFactor]();
-                }
-            }  //TODO other callbacks
-            else {
-                //error, invalid action
+            if (action == "tare")
+            {
+                // send event to inform other modules to action
+                Event ev("Loadcell/tare");
+                EventManager::instance().publish(ev);
             }
+            else if (action == "calibrateByWeight")
+            {
 
-            request->send(200,"text/plain","OK"); });
+                if (request->hasParam("knownWeight", true))
+                {
+                    String knownWeight = request->getParam("knownWeight", true)->value();
+
+                    // send event to inform other modules to action
+                    DataEvent ev("Loadcell/calibrateByWeight", knownWeight);
+                    EventManager::instance().publish(ev);
+
+                    request->send(200, "text/plain", "OK");
+                }
+                else
+                {
+                    request->send(400, "text/plain", "parameter missing");
+                    return;
+                }
+            }
+            else if (action == "setCalibrationFactor")
+            {
+                if (request->hasParam("calibrationFactor", true))
+                {
+                    String calibrationFactor = request->getParam("calibrationFactor", true)->value();
+
+                    // send event to inform other modules to action
+                    DataEvent ev("Loadcell/setCalibrationFactor", calibrationFactor);
+                    EventManager::instance().publish(ev);
+
+                    request->send(200, "text/plain", "OK");
+                }
+                else
+                {
+                    request->send(400, "text/plain", "parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                request->send(400, "text/plain", "unknown cmd action");
+                return;
+            } });
 
         // SSE ......
         events.onConnect([](AsyncEventSourceClient *client)
@@ -128,5 +140,4 @@ namespace Webservice
     {
         events.send(value.c_str(), event.c_str(), millis());
     }
-
 }

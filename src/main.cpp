@@ -1,36 +1,31 @@
 /*
-  Use the Qwiic Scale to read load cells and scales
-  By: Nathan Seidle @ SparkFun Electronics
-  Date: March 3rd, 2019
-  License: This code is public domain but you buy me a beer if you use this
-  and we meet someday (Beerware license).
+  Strain Gauge Amplifier
+  By: Michael Gröne
+  Date: 2022-08-10
+  License: tbd
 
-  This example shows how to setup a scale complete with zero offset (tare),
-  and linear calibration.
+  Small mobile strain gauge amplifier with battery
 
-  If you know the calibration and offset values you can send them directly to
-  the library. This is useful if you want to maintain values between power cycles
-  in EEPROM or Non-volatile memory (NVM). If you don't know these values then
-  you can go through a series of steps to calculate the offset and calibration value.
+  Features:
+    - mobile case 3d printed
+    - battery powered, remaining battery display
+    - charge by usb c
+    - display for measurement data
+    - webinterface via AP
+      - extended measurement data
+      - calibration menu
+      - change settings and persist preferences
 
-  Background: The IC merely outputs the raw data from a load cell. For example, the
-  output may be 25776 and change to 43122 when a cup of tea is set on the scale.
-  These values are unitless - they are not grams or ounces. Instead, it is a
-  linear relationship that must be calculated. Remeber y = mx + b?
-  If 25776 is the 'zero' or tare state, and 43122 when I put 15.2oz of tea on the
-  scale, then what is a reading of 57683 in oz?
 
-  (43122 - 25776) = 17346/15.2 = 1141.2 per oz
-  (57683 - 25776) = 31907/1141.2 = 27.96oz is on the scale
+  BOM:
+    - tbd
 
-  SparkFun labored with love to create this code. Feel like supporting open
-  source? Buy a board from SparkFun!
-  https://www.sparkfun.com/products/15242
+  TODOs:
+    - cleanup/refactor
+    - Quasar webinterface
+    - implement battery IC
 
-  Hardware Connections:
-  Plug a Qwiic cable into the Qwiic Scale and a RedBoard Qwiic
-  If you don't have a platform with a Qwiic connection use the SparkFun Qwiic Breadboard Jumper (https://www.sparkfun.com/products/14425)
-  Open the serial monitor at 9600 baud to see the output
+
 */
 
 #include <ArduinoJson.h>
@@ -42,23 +37,15 @@ Preferences main_preferences;
 #include "Loadcell.hpp"
 #include "Display.hpp"
 
-#include <events.hpp>
+/*
+ * Events to couple the modules...
+ */
+// EventSolution1: https://github.com/esp32m/events
+// eval: ok, other considered event busses: MicroQT, Automaton, TaskManagerIO, Eventually
+#include <DataEvent.hpp>
 using namespace esp32m;
-class CustomEvent<typename T>
-    : public Event
-{
-public:
-  CustomEvent(T data) : Event("custom"), _data(data) {}
-  T data() { return _data; }
-
-private:
-  T _data;
-};
 
 ulong updateLastMillis = 0;
-
-void onActionTare();
-void onActionCalibrateFactor();
 
 void setup()
 {
@@ -69,17 +56,6 @@ void setup()
   Webservice::initialize();
   Display::initialize();
   Loadcell::initialize();
-
-  // commands
-  Webservice::setCallback(Webservice::Tare, &onActionTare);
-  Webservice::setCallback(Webservice::CalibrateFactor, &onActionCalibrateFactor);
-
-  EventManager::instance().subscribe([](Event *ev)
-                                     {
-    if (ev->is("notify"))
-    {
-    Serial.println("notified!");
-    } });
 }
 
 void loop()
@@ -100,17 +76,4 @@ void loop()
     Webservice::invokeSendEvent("weight", String(Loadcell::getWeight(), 1));
     Webservice::invokeSendEvent("force", String(Loadcell::getForce(), 0));
   }
-}
-
-void onActionTare()
-{
-  Loadcell::cmdTare();
-  Event ev("notify");
-  EventManager::instance().publish(ev);
-}
-
-void onActionCalibrateFactor()
-{
-  float knownWeight = 123; // TODO: wo bekomme ich das her?
-  Loadcell::cmdCalcCalibrationFactor(knownWeight);
 }
