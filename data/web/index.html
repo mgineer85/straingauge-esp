@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <script src="js/main.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        if (!!window.EventSource) {
+            var source = new EventSource('/events');
+
+            source.addEventListener('open', function(e) {
+                console.log("Events Connected");
+            }, false);
+
+            source.addEventListener('error', function(e) {
+                if (e.target.readyState != EventSource.OPEN) {
+                console.log("Events Disconnected");
+                }
+            }, false);
+
+            source.addEventListener(null, function(e) {
+                console.log("any event received:", e.data);
+            }, false);
+
+            source.addEventListener('reading', function(e) {
+                const force = e.data;
+                const elementForce = document.getElementById("reading");
+                elementForce.textContent=force;
+            }, false);
+            
+            source.addEventListener('weight', function(e) {
+                const force = e.data;
+                const elementForce = document.getElementById("weight");
+                elementForce.textContent=force;
+            }, false);
+            
+            source.addEventListener('force', function(e) {
+                const force = e.data;
+                const elementForce = document.getElementById("force");
+                elementForce.textContent=force;
+            }, false);
+
+            source.addEventListener('ping', function(e) {
+                const force = e.data;
+                const elementForce = document.getElementById("ping");
+                elementForce.textContent=force;
+            }, false);
+
+            source.onmessage = (event) => {
+                const newElement = document.createElement("li");
+                const eventList = document.getElementById("list");
+
+                newElement.textContent = `message: ${event.data}`;
+                eventList.appendChild(newElement);
+            }
+        }
+
+        function getWifiInfo() {
+                let url = '/api/wifi-info';
+
+                    fetch(url)
+                    .then(res => res.json())
+                    .then(out =>
+                    console.log('Checkout this JSON! ', out))
+                    .catch(err => console.log('Checkout this error! ', err));
+        }
+        
+        function cmd(_action) {
+                let url = '/api/cmd';
+                
+                fetch(url, {
+                    body: new FormData().append('action',_action),
+                    method: "POST"
+                })
+                .then((response) => {
+                    if (response.status === 200) {
+                    console.log(response);
+                    }
+                })
+                .then((response) => {
+                    console.debug(response);
+                    // …
+                }).catch((error) => {
+                    console.error(error);
+                });
+
+        }
+        function send(e,form) {
+            fetch("/api/cmd", {method:'post', body: new FormData(form)});
+
+            console.log('We send post asynchronously (AJAX)');
+            e.preventDefault();
+        }
+    </script>
+</head>
+<body>
+
+    <div>Reading: <span id="reading">xxx</span> -</div>
+    <div>Weight: <span id="weight">xxx</span> kg</div>
+    <div>Force: <span id="force">xxx</span> N</div>
+    <div>Ping: <span id="ping">xxx</span></div>
+    <a href="javascript:getWifiInfo();">getWifiInfo</a><br>
+    <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
+        <input hidden name="action" value="tare">
+        <input type="submit">    
+    </form>
+    <a href="javascript:cmd('tare');">Tare</a>
+    <ul id="list"><li>first entry</li></ul>
+    html content
+</body>
+</html>
