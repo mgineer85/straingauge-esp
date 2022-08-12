@@ -33,7 +33,7 @@ namespace Display
         display.cp437(true);           // Use full 256 char 'Code Page 437' font
         display.setTextSize(1);        // Normal 1:1 pixel scale
         display.setCursor(0, 32 - 16); // Start at top-left corner
-        display.print("wait...");
+        display.print("starting...");
 
         // Show the display buffer on the screen. You MUST call display() after
         // drawing commands to make them visible on screen!
