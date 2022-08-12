@@ -17,12 +17,7 @@
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-#define NUMFLAKES 10 // Number of snowflakes in the animation example
-
-#define LOGO_HEIGHT 16
-#define LOGO_WIDTH 16
-
-//logo converted with LCDassistant
+// logo converted with LCDassistant
 static const unsigned char PROGMEM logo_bmp[] = {
     0xFF,
     0xFF,
