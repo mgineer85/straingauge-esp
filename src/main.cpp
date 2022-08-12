@@ -23,7 +23,9 @@
   TODOs:
     - cleanup/refactor
     - Quasar webinterface
-    - implement battery IC
+    - test battery interface
+    - implement tare button functionality (GPIO0 button) using Button2 library.
+    - any use for GPIO13 LED on s2 board?
 
 
 */
@@ -36,6 +38,7 @@ Preferences main_preferences;
 #include "Webservice.hpp"
 #include "Loadcell.hpp"
 #include "Display.hpp"
+#include "FuelGauge.hpp"
 
 /*
  * Events to couple the modules...
@@ -49,6 +52,7 @@ ulong updateLastMillis = 0;
 
 void setup()
 {
+  delay(200); // wait for all modules to start up before init communication. without this delay some modules lead to freezing program because the I2C communication fails.
   Serial.begin(115200);
   Wire.begin();
 
@@ -70,6 +74,7 @@ void loop()
   {
     updateLastMillis = millis();
 
+    FuelGauge::update_loop();
     Display::set_variables(Loadcell::getForce(), Loadcell::getReading(), FuelGauge::getBatteryPercent());
     Display::update_loop();
 
