@@ -17,15 +17,10 @@ namespace Display
         // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
         if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
         {
-            Serial.println(F("SSD1306 allocation failed"));
+            Serial.println(F("SSD1306 allocation failed, freezing..."));
             for (;;)
                 ; // Don't proceed, loop forever
         }
-
-        // Show initial display buffer contents on the screen --
-        // the library initializes this with an Adafruit splash screen.
-        display.display();
-        delay(2000); // Pause for 2 seconds
 
         // Init
         display.clearDisplay();
@@ -38,9 +33,6 @@ namespace Display
         // Show the display buffer on the screen. You MUST call display() after
         // drawing commands to make them visible on screen!
         display.display();
-        delay(2000);
-
-        static_content();
     }
 
     void set_variables(double force, int32_t reading, uint8_t battery)
@@ -63,6 +55,13 @@ namespace Display
         display.setTextSize(1);         // Normal 1:1 pixel scale
         display.setCursor(100, 32 - 8); // Start at top-left corner
         display.print("[N]");
+
+        // Battery
+        display.setTextSize(1);       // Normal 1:1 pixel scale
+        display.setCursor(0, 32 - 8); // Start at top-left corner
+        display.print("Battery");
+
+        display.display();
     }
 
     void update_loop()
@@ -71,6 +70,11 @@ namespace Display
         display.setTextSize(3);   // Normal 1:1 pixel scale
         display.setCursor(20, 0); // Start at top-left corner
         display.printf("%5.0f", _force);
+
+        // N
+        display.setTextSize(1);        // Normal 1:1 pixel scale
+        display.setCursor(60, 32 - 8); // Start at top-left corner
+        display.print(_battery);
 
         display.display();
     }

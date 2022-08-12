@@ -33,14 +33,13 @@ namespace Loadcell
     {
         preferences.begin("loadcell-module", false);
 
-        Wire.begin();
-
-        while (myScale.begin() == false)
+        if (!myScale.begin())
         {
             Serial.println("Scale not detected. Please check wiring. Retry...");
             delay(1000);
+            if (!myScale.begin())
+                Serial.println("Scale not detected in second run. Ignoring...");
         }
-
         readSystemSettings(); // Load zeroOffset and calibrationFactor from EEPROM
         myScale.setZeroOffset(-5446);
         myScale.setCalibrationFactor(4200);

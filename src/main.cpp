@@ -50,12 +50,15 @@ ulong updateLastMillis = 0;
 void setup()
 {
   Serial.begin(115200);
+  Wire.begin();
 
   main_preferences.begin("main-app", false);
 
-  Webservice::initialize();
   Display::initialize();
+  Webservice::initialize();
   Loadcell::initialize();
+  FuelGauge::initialize();
+  Display::static_content(); // display static content after init all modules
 }
 
 void loop()
@@ -67,7 +70,7 @@ void loop()
   {
     updateLastMillis = millis();
 
-    Display::set_variables(Loadcell::getForce(), Loadcell::getReading(), 0);
+    Display::set_variables(Loadcell::getForce(), Loadcell::getReading(), FuelGauge::getBatteryPercent());
     Display::update_loop();
 
     // events + data
