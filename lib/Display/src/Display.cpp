@@ -8,7 +8,7 @@ namespace Display
 
     double _force = 0;
     int32_t _reading = 0;
-    uint8_t _battery = 0;
+    float _battery = 0;
 
     ///
     void initialize()
@@ -35,7 +35,7 @@ namespace Display
         display.display();
     }
 
-    void set_variables(double force, int32_t reading, uint8_t battery)
+    void set_variables(double force, int32_t reading, float battery)
     {
         _force = force;
         _reading = reading;
@@ -74,7 +74,7 @@ namespace Display
         // N
         display.setTextSize(1);        // Normal 1:1 pixel scale
         display.setCursor(60, 32 - 8); // Start at top-left corner
-        display.print(_battery);
+        display.printf("%3.0f%%", _battery);
 
         display.display();
     }

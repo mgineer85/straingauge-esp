@@ -48,13 +48,13 @@ Preferences main_preferences;
 #include <DataEvent.hpp>
 using namespace esp32m;
 
-ulong updateLastMillis = 0;
+ulong updateLastMillisFast = 0;
+ulong updateLastMillisSlow = 0;
 
 void setup()
 {
   delay(200); // wait for all modules to start up before init communication. without this delay some modules lead to freezing program because the I2C communication fails.
   Serial.begin(115200);
-  Wire.begin();
 
   main_preferences.begin("main-app", false);
 
@@ -63,6 +63,9 @@ void setup()
   Loadcell::initialize();
   FuelGauge::initialize();
   Display::static_content(); // display static content after init all modules
+
+  // after all inits set frequency to
+  Wire.setClock(400000U); // 100kHz is default but has issues: https://github.com/espressif/esp-idf/issues/8770. testing 400k now (max of slaves)
 }
 
 void loop()
@@ -70,11 +73,10 @@ void loop()
   Loadcell::update_loop();
 
   // update display+webservice not every loop due to high load.
-  if ((millis() - updateLastMillis) > 250)
+  if ((millis() - updateLastMillisFast) > 500)
   {
-    updateLastMillis = millis();
+    updateLastMillisFast = millis();
 
-    FuelGauge::update_loop();
     Display::set_variables(Loadcell::getForce(), Loadcell::getReading(), FuelGauge::getBatteryPercent());
     Display::update_loop();
 
@@ -83,5 +85,29 @@ void loop()
     Webservice::invokeSendEvent("reading", String(Loadcell::getReading()));
     Webservice::invokeSendEvent("weight", String(Loadcell::getWeight(), 1));
     Webservice::invokeSendEvent("force", String(Loadcell::getForce(), 0));
+
+    // send debug information
+    Serial.println();
+    Serial.print(Loadcell::getReading());
+    Serial.print("\t");
+    Serial.print(Loadcell::getWeight(), 1);
+    Serial.print("\t");
+    Serial.print(Loadcell::getForce(), 0);
+  }
+
+  if ((millis() - updateLastMillisSlow) > 4000)
+  {
+    updateLastMillisSlow = millis();
+
+    FuelGauge::update_loop();
+
+    // events + data
+    Webservice::invokeSendEvent("battery", String(FuelGauge::getBatteryPercent(), 1));
+
+    // send some debug information
+    Serial.print("\t");
+    Serial.print(FuelGauge::getBatteryPercent(), 1);
+    Serial.print("\t");
+    Serial.print(FuelGauge::getBatteryVoltage(), 3);
   }
 }

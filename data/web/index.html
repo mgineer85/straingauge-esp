@@ -43,6 +43,12 @@
                 elementForce.textContent=force;
             }, false);
 
+            source.addEventListener('battery', function(e) {
+                const force = e.data;
+                const elementForce = document.getElementById("battery");
+                elementForce.textContent=force;
+            }, false);
+
             source.addEventListener('ping', function(e) {
                 const force = e.data;
                 const elementForce = document.getElementById("ping");
@@ -98,6 +104,7 @@
     <div>Weight: <span id="weight">xxx</span> kg</div>
     <div>Force: <span id="force">xxx</span> N</div>
     <div>Ping: <span id="ping">xxx</span></div>
+    <div>Battery: <span id="battery">xxx</span></div>
     
     <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
         <input hidden name="action" value="tare">

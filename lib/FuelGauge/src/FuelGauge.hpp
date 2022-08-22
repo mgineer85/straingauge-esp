@@ -7,6 +7,7 @@
 namespace FuelGauge
 {
     void initialize();
-    uint8_t getBatteryPercent();
+    float getBatteryPercent();
+    float getBatteryVoltage();
     void update_loop();
 }

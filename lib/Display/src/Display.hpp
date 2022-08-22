@@ -23,7 +23,7 @@ namespace Display
     /// Initialize the webserver
     ///
     void initialize();
-    void set_variables(double force, int32_t reading, uint8_t battery);
+    void set_variables(double force, int32_t reading, float battery);
     void update_loop();
     void static_content();
 }

@@ -7,6 +7,8 @@ namespace FuelGauge
     Adafruit_LC709203F lc;
 
     bool _batteryConnected = false;
+    float _batteryCellPercent = 0;
+    float _batteryVoltage = 0;
 
     ///
     void initialize()
@@ -26,9 +28,14 @@ namespace FuelGauge
         lc.setPackSize(LC709203F_APA_1000MAH);
     }
 
-    uint8_t getBatteryPercent()
+    float getBatteryPercent()
     {
-        return (_batteryConnected) ? (uint8_t)(lc.cellPercent()) : 0;
+        return (_batteryConnected) ? _batteryCellPercent : 0;
+    }
+
+    float getBatteryVoltage()
+    {
+        return (_batteryConnected) ? _batteryVoltage : 0;
     }
 
     void update_loop()
@@ -43,6 +50,11 @@ namespace FuelGauge
             {
                 _batteryConnected = false;
             }
+        }
+        else
+        {
+            _batteryCellPercent = lc.cellPercent();
+            _batteryVoltage = lc.cellVoltage();
         }
     }
 
