@@ -133,18 +133,6 @@ namespace Loadcell
         {
             float currentWeight = myScale.getWeight(true, 1);
             filterWeight.add(currentWeight);
-
-            // may add callback function here to update other modules.
-
-            // output for serialplot
-            Serial.print(myScale.getReading());
-            Serial.print("\t");
-            Serial.print(currentWeight, 2); // Print 2 decimal places
-            Serial.print("\t");
-            Serial.print(filterWeight.getAverage(), 2); // Print 2 decimal places
-            Serial.print("\t");
-            Serial.print(filterWeight.getAverage() * 9.81, 1); // Print 2 decimal places
-            Serial.println();
         }
     }
 }
