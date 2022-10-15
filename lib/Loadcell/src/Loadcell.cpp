@@ -11,7 +11,7 @@ namespace Loadcell
 {
     NAU7802 myScale; // Create instance of the NAU7802 class
     Preferences preferences;
-    RunningMedian filterWeight = RunningMedian(AVG_SIZE);
+    RunningMedian filterForceAverage = RunningMedian(AVG_SIZE);
 
     // Record the current system settings to EEPROM
     void recordSystemSettings(void)
@@ -24,9 +24,15 @@ namespace Loadcell
     // If anything looks weird, reset setting to default value
     void readSystemSettings(void)
     {
-        // Pass these values to the library
-        myScale.setCalibrationFactor(preferences.getFloat("cal_factor", 1));
-        myScale.setZeroOffset(preferences.getInt("zero_offset", 1));
+        Serial.println("loadcell readSystemSettings");
+
+        myScale.setCalibrationFactor(preferences.getFloat("cal_factor", 2461));
+        myScale.setZeroOffset(preferences.getInt("zero_offset", 0));
+
+        Serial.print("Zero offset: ");
+        Serial.println(myScale.getZeroOffset());
+        Serial.print("Calibration factor: ");
+        Serial.println(myScale.getCalibrationFactor());
     }
 
     void initialize()
@@ -41,19 +47,12 @@ namespace Loadcell
                 Serial.println("Scale not detected in second run. Ignoring...");
         }
         readSystemSettings(); // Load zeroOffset and calibrationFactor from EEPROM
-        myScale.setZeroOffset(-5446);
-        myScale.setCalibrationFactor(4200);
 
         myScale.setChannel(NAU7802_CHANNEL_1);
         myScale.setSampleRate(NAU7802_SPS_10); // Increase to max sample rate
         myScale.setGain(NAU7802_GAIN_128);
         myScale.setLDO(NAU7802_LDO_3V0);
         myScale.calibrateAFE(); // Re-cal analog front end when we change gain, sample rate, or channel
-
-        Serial.print("Zero offset: ");
-        Serial.println(myScale.getZeroOffset());
-        Serial.print("Calibration factor: ");
-        Serial.println(myScale.getCalibrationFactor());
 
         // register events
         EventManager::instance().subscribe([](Event *ev)
@@ -78,12 +77,30 @@ namespace Loadcell
 
         EventManager::instance().subscribe([](Event *ev)
                                            {
-            if (ev->is("Loadcell/calibrateByWeight"))
+            if (ev->is("Loadcell/calibrateToKnownValue"))
             {
-                Serial.println("Loadcell/calibrateByWeight");
+                Serial.println("Loadcell/calibrateToKnownValue");
                 Serial.println(((DataEvent *)ev)->data());
 
                 cmdCalcCalibrationFactor(((DataEvent *)ev)->data().toFloat());
+        } });
+
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("*/savePrefs"))
+            {
+                Serial.println("Loadcell/savePrefs");
+
+                recordSystemSettings();
+        } });
+
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("*/loadPrefs"))
+            {
+                Serial.println("Loadcell/loadPrefs");
+
+                readSystemSettings();
         } });
     }
 
@@ -92,19 +109,18 @@ namespace Loadcell
     {
         return myScale.getReading();
     }
-    float getWeight()
-    {
-        return filterWeight.getAverage();
-    }
     float getForce()
     {
-        return getWeight() * 9.81;
+        return filterForceAverage.getAverage();
     }
 
     // commands triggered externally
     void cmdTare()
     {
         myScale.calculateZeroOffset(8);
+
+        DataEvent ev("Webservice/sendMessage", "new zero offset: " + String(myScale.getZeroOffset()));
+        EventManager::instance().publish(ev);
     }
     void cmdCalcCalibrationFactor(float weightOnScale)
     {
@@ -113,6 +129,9 @@ namespace Loadcell
         // step 3: calc cal factor
         myScale.calculateCalibrationFactor(weightOnScale);
         // step 4: store cal factor
+
+        DataEvent ev("Webservice/sendMessage", "new calibraction factor: " + String(myScale.getCalibrationFactor()));
+        EventManager::instance().publish(ev);
     }
     void cmdSetCalibrationFactor(float factor)
     {
@@ -121,6 +140,9 @@ namespace Loadcell
     void cmdInternalCalibration()
     {
         myScale.calibrateAFE();
+
+        DataEvent ev("Webservice/sendMessage", String("internal calibration finished"));
+        EventManager::instance().publish(ev);
     }
     void cmdPersistPreferences()
     {
@@ -131,8 +153,7 @@ namespace Loadcell
     {
         if (myScale.available() == true)
         {
-            float currentWeight = myScale.getWeight(true, 1);
-            filterWeight.add(currentWeight);
+            filterForceAverage.add(myScale.getWeight(true, 1)); // getWeight means actually receiving the reading divided by the calibration factor to convert to SI-unit. We calibrate for N, so this is it.
         }
     }
 }

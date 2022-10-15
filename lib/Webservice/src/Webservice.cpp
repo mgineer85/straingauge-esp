@@ -76,16 +76,18 @@ namespace Webservice
                 // send event to inform other modules to action
                 Event ev("Loadcell/tare");
                 EventManager::instance().publish(ev);
+
+                request->send(200, "text/plain", "OK");
             }
-            else if (action == "calibrateByWeight")
+            else if (action == "calibrateToKnownValue")
             {
 
-                if (request->hasParam("knownWeight", true))
+                if (request->hasParam("knownValue", true))
                 {
-                    String knownWeight = request->getParam("knownWeight", true)->value();
+                    String knownValue = request->getParam("knownValue", true)->value();
 
                     // send event to inform other modules to action
-                    DataEvent ev("Loadcell/calibrateByWeight", knownWeight);
+                    DataEvent ev("Loadcell/calibrateToKnownValue", knownValue);
                     EventManager::instance().publish(ev);
 
                     request->send(200, "text/plain", "OK");
@@ -114,8 +116,27 @@ namespace Webservice
                     return;
                 }
             }
+            else if (action == "savePreferences")
+            {
+
+                // send event to inform other modules to action
+                Event ev("*/savePrefs");
+                EventManager::instance().publish(ev);
+
+                request->send(200, "text/plain", "OK");
+                        }
+            else if (action == "loadPreferences")
+            {
+
+                // send event to inform other modules to action
+                Event ev("*/loadPrefs");
+                EventManager::instance().publish(ev);
+
+                request->send(200, "text/plain", "OK");
+                        }
             else
             {
+                Serial.println("unknown cmd action");
                 request->send(400, "text/plain", "unknown cmd action");
                 return;
             } });
@@ -134,6 +155,16 @@ namespace Webservice
         server.onNotFound(notFound);
 
         server.begin();
+
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("Webservice/sendMessage"))
+            {
+                Serial.println("Webservice/sendMessage");
+                Serial.println(((DataEvent *)ev)->data());
+
+                invokeSendEvent("message",((DataEvent *)ev)->data());
+        } });
     }
 
     void invokeSendEvent(String event, String value)

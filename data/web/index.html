@@ -31,12 +31,6 @@
                 elementForce.textContent=force;
             }, false);
             
-            source.addEventListener('weight', function(e) {
-                const force = e.data;
-                const elementForce = document.getElementById("weight");
-                elementForce.textContent=force;
-            }, false);
-            
             source.addEventListener('force', function(e) {
                 const force = e.data;
                 const elementForce = document.getElementById("force");
@@ -101,7 +95,6 @@
 <body>
 
     <div>Reading: <span id="reading">xxx</span> -</div>
-    <div>Weight: <span id="weight">xxx</span> kg</div>
     <div>Force: <span id="force">xxx</span> N</div>
     <div>Ping: <span id="ping">xxx</span></div>
     <div>Battery: <span id="battery">xxx</span></div>
@@ -111,9 +104,9 @@
         <input type="submit" value="Tare">    
     </form>
     <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
-        <input hidden name="action" value="calibrateByWeight">
-        <input type="number" name="knownWeight" value="">
-        <input type="submit" value="calibrate to weight">
+        <input hidden name="action" value="calibrateToKnownValue">
+        <input type="number" name="knownValue" value="">
+        <input type="submit" value="calibrate to known value">
     </form>
     <form method="POST" action="/api/cmd" onsubmit="send(event,this)">
         <input hidden name="action" value="setCalibrationFactor">
