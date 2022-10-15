@@ -1,6 +1,8 @@
 #include <Webservice.hpp>
 #include <ArduinoJson.h>
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
+//#include <LittleFS.h>
+#include <FFat.h>
 #include <DataEvent.hpp>
 using namespace esp32m;
 
@@ -34,13 +36,28 @@ namespace Webservice
         Serial.print("Hostname: ");
         Serial.println(WiFi.getHostname());
 
-        if (!SPIFFS.begin(true))
+        if (!FFat.begin(true, ""))
+        {
+            Serial.println("An error has occurred while mounting FFat");
+            return;
+        }
+        /*
+        // Initialze LittleFS
+        if (!LittleFS.begin())
+        {
+            Serial.println("An error has occurred while mounting LittleFS");
+            return;
+        }
+        */
+        /*if (!SPIFFS.begin(true))
         {
             Serial.println("An Error has occurred while mounting SPIFFS");
-        }
+        }*/
 
         // attach filesystem root at URL /fs
-        server.serveStatic("/", SPIFFS, "/web/")
+        server.serveStatic("/", FFat, "/web/")
+            .setDefaultFile("index.html");
+        server.serveStatic("/q/", FFat, "/q/")
             .setDefaultFile("index.html");
 
         // Initialize webserver URLs
