@@ -40,6 +40,10 @@ Preferences main_preferences;
 #include "Display.hpp"
 #include "FuelGauge.hpp"
 
+#include "Button2.h"
+#define BUTTON_PIN 0
+Button2 button;
+
 /*
  * Events to couple the modules...
  */
@@ -51,10 +55,23 @@ using namespace esp32m;
 ulong updateLastMillisFast = 0;
 ulong updateLastMillisSlow = 0;
 
+/////////////////////////////////////////////////////////////////
+void pressed(Button2 &btn)
+{
+  Serial.println("tare button pressed");
+
+  // send event to inform other modules to action
+  Event ev("Loadcell/tare");
+  EventManager::instance().publish(ev);
+}
+
 void setup()
 {
   delay(200); // wait for all modules to start up before init communication. without this delay some modules lead to freezing program because the I2C communication fails.
   Serial.begin(115200);
+
+  button.begin(BUTTON_PIN);
+  button.setPressedHandler(pressed);
 
   main_preferences.begin("main-app", false);
 
@@ -70,6 +87,7 @@ void setup()
 
 void loop()
 {
+  button.loop();
   Loadcell::update_loop();
 
   // update display+webservice not every loop due to high load.
@@ -83,14 +101,11 @@ void loop()
     // events + data
     Webservice::invokeSendEvent("ping", String(millis()));
     Webservice::invokeSendEvent("reading", String(Loadcell::getReading()));
-    Webservice::invokeSendEvent("weight", String(Loadcell::getWeight(), 1));
     Webservice::invokeSendEvent("force", String(Loadcell::getForce(), 0));
 
     // send debug information
     Serial.println();
     Serial.print(Loadcell::getReading());
-    Serial.print("\t");
-    Serial.print(Loadcell::getWeight(), 1);
     Serial.print("\t");
     Serial.print(Loadcell::getForce(), 0);
   }
