@@ -55,9 +55,9 @@ namespace Webservice
         }*/
 
         // attach filesystem root at URL /fs
-        server.serveStatic("/", FFat, "/web/")
+        server.serveStatic("/", FFat, "/q/")
             .setDefaultFile("index.html");
-        server.serveStatic("/q/", FFat, "/q/")
+        server.serveStatic("/_oldweb/", FFat, "/_oldweb/")
             .setDefaultFile("index.html");
 
         // Initialize webserver URLs
