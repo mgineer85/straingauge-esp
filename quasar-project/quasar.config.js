@@ -88,7 +88,20 @@ module.exports = configure(function (ctx) {
         type: 'http'
       },
       port: 8080,
-      open: true // opens browser window automatically
+      open: true, // opens browser window automatically
+      proxy: {
+      // proxy all requests starting with /api to jsonplaceholder
+        '/api': {
+          target: 'http://esp32s2-55AE70',
+          changeOrigin: true,
+        },
+        '/events': {
+          target: 'http://esp32s2-55AE70',
+          changeOrigin: true,
+          ws: true
+        },
+      },
+      compress: false //workaround for /events SSE make to work
     },
 
     // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-framework
@@ -154,9 +167,9 @@ module.exports = configure(function (ctx) {
 
 
       manifest: {
-        name: `Quasar App`,
-        short_name: `Quasar App`,
-        description: `A Quasar Project`,
+        name: `qMeasure`,
+        short_name: `qMeasure`,
+        description: `Display for Strain Gauge Sensors`,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#ffffff',
