@@ -35,6 +35,7 @@
 #include <Preferences.h>
 Preferences main_preferences;
 
+#include "ConfigService.hpp"
 #include "Webservice.hpp"
 #include "Loadcell.hpp"
 #include "Display.hpp"
@@ -75,6 +76,7 @@ void setup()
 
   main_preferences.begin("main-app", false);
 
+  ConfigService::initialize();
   Display::initialize();
   Webservice::initialize();
   Loadcell::initialize();
@@ -97,32 +99,31 @@ void loop()
 
     Display::set_variables(Loadcell::getForce(), Loadcell::getReading(), FuelGauge::getBatteryPercent());
     Display::update_loop();
+    FuelGauge::update_loop();
 
     // events + data
     Webservice::invokeSendEvent("ping", String(millis()));
     Webservice::invokeSendEvent("reading", String(Loadcell::getReading()));
     Webservice::invokeSendEvent("force", String(Loadcell::getForce(), 0));
+    Webservice::invokeSendEvent("battery", String(FuelGauge::getBatteryPercent(), 1));
 
     // send debug information
     Serial.println();
     Serial.print(Loadcell::getReading());
     Serial.print("\t");
     Serial.print(Loadcell::getForce(), 0);
+    Serial.print("\t");
+    Serial.print(FuelGauge::getBatteryPercent(), 1);
+    Serial.print("\t");
+    Serial.print(FuelGauge::getBatteryVoltage(), 3);
   }
 
   if ((millis() - updateLastMillisSlow) > 4000)
   {
     updateLastMillisSlow = millis();
 
-    FuelGauge::update_loop();
-
     // events + data
-    Webservice::invokeSendEvent("battery", String(FuelGauge::getBatteryPercent(), 1));
 
     // send some debug information
-    Serial.print("\t");
-    Serial.print(FuelGauge::getBatteryPercent(), 1);
-    Serial.print("\t");
-    Serial.print(FuelGauge::getBatteryVoltage(), 3);
   }
 }
