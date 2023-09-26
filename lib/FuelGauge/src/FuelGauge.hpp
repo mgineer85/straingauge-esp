@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "Adafruit_LC709203F.h"
+#include "Adafruit_MAX1704X.h"
 
 ///
 namespace FuelGauge

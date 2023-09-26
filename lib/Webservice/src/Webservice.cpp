@@ -11,9 +11,6 @@ namespace Webservice
     AsyncWebServer server(80);
     AsyncEventSource events("/events");
 
-    const char *ssid = "chumbawumba";
-    const char *password = "Schneepflug";
-
     const char *PARAM_MESSAGE = "message";
 
     void notFound(AsyncWebServerRequest *request)
@@ -23,36 +20,6 @@ namespace Webservice
 
     void initialize()
     {
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(ssid, password);
-        if (WiFi.waitForConnectResult() != WL_CONNECTED)
-        {
-            Serial.printf("WiFi Failed!\n");
-            return;
-        }
-
-        Serial.print("IP Address: ");
-        Serial.println(WiFi.localIP());
-        Serial.print("Hostname: ");
-        Serial.println(WiFi.getHostname());
-
-        if (!FFat.begin(true, ""))
-        {
-            Serial.println("An error has occurred while mounting FFat");
-            return;
-        }
-        /*
-        // Initialze LittleFS
-        if (!LittleFS.begin())
-        {
-            Serial.println("An error has occurred while mounting LittleFS");
-            return;
-        }
-        */
-        /*if (!SPIFFS.begin(true))
-        {
-            Serial.println("An Error has occurred while mounting SPIFFS");
-        }*/
 
         // attach filesystem root at URL /fs
         server.serveStatic("/", FFat, "/q/")

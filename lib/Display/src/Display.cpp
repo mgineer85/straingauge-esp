@@ -4,7 +4,9 @@
 namespace Display
 {
 
-    Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+    // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+    U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
     double _force = 0;
     int32_t _reading = 0;
@@ -15,24 +17,19 @@ namespace Display
     {
 
         // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-        if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+        if (!display.begin())
         {
-            Serial.println(F("SSD1306 allocation failed, freezing..."));
+            Serial.println(F("Display begin failed, freezing..."));
             for (;;)
                 ; // Don't proceed, loop forever
         }
+        Serial.println(F("Display initialized"));
 
         // Init
-        display.clearDisplay();
-        display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-        display.cp437(true);           // Use full 256 char 'Code Page 437' font
-        display.setTextSize(1);        // Normal 1:1 pixel scale
-        display.setCursor(0, 32 - 16); // Start at top-left corner
-        display.print("starting...");
-
-        // Show the display buffer on the screen. You MUST call display() after
-        // drawing commands to make them visible on screen!
-        display.display();
+        display.clearBuffer();                 // clear the internal memory
+        display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
+        display.drawStr(0, 10, "starting..."); // write something to the internal memory
+        display.sendBuffer();                  // transfer internal memory to the display
     }
 
     void set_variables(double force, int32_t reading, float battery)
@@ -44,39 +41,37 @@ namespace Display
 
     void static_content()
     {
-        display.clearDisplay();
+        display.clearBuffer();
+
+        display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
 
         // force
-        display.setTextSize(2);  // Normal 1:1 pixel scale
-        display.setCursor(0, 8); // Start at top-left corner
-        display.print("F=");
+        display.drawStr(0, 8, "F=");
 
         // N
-        display.setTextSize(1);         // Normal 1:1 pixel scale
-        display.setCursor(100, 32 - 8); // Start at top-left corner
-        display.print("[N]");
+        display.drawStr(100, 32 - 8, "[N]");
 
-        // Battery
-        display.setTextSize(1);       // Normal 1:1 pixel scale
-        display.setCursor(0, 32 - 8); // Start at top-left corner
-        display.print("Battery");
-
-        display.display();
+        // Battery Icon
+        display.setFont(u8g2_font_unifont_t_symbols);
+        display.drawGlyph(5, 64, 0x2603); /* dec 9731/hex 2603 Snowman */
     }
 
     void update_loop()
     {
+        char buf[10];
+
         // force
-        display.setTextSize(3);   // Normal 1:1 pixel scale
-        display.setCursor(20, 0); // Start at top-left corner
-        display.printf("%5.0f", _force);
+        display.setFont(u8g2_font_inr24_mn); // choose a suitable font
+        sprintf(buf, "%5.0f", _force);
+        display.drawStr(0, 25, buf);
+        display.print(_force, 0);
 
-        // N
-        display.setTextSize(1);        // Normal 1:1 pixel scale
-        display.setCursor(60, 32 - 8); // Start at top-left corner
-        display.printf("%3.0f%%", _battery);
+        // battery
+        display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
+        sprintf(buf, "%3.0f%%", _battery);
+        display.drawStr(60, 64 - 8, buf);
 
-        display.display();
+        display.sendBuffer();
     }
 
 }

@@ -1,31 +1,29 @@
 #include <ConfigService.hpp>
-#include <ArduinoJson.h>
-#include <FFat.h>
+#include <DataEvent.hpp>
 
-///
+using namespace esp32m;
+
 namespace ConfigService
 {
 
-    const char *filename = "/config.json";
-    Config config; // <- global configuration object
+    // SystemConfig config; // <- global configuration object
 
-    ///
     void initialize()
     {
+
+        // commands
+        EventManager::instance().subscribe([](Event *ev)
+                                           {
+            if (ev->is("*/XXXXX"))
+            {
+                
+            } });
+
         Serial.println("\nConfigService init");
-        if (!FFat.begin(false, ""))
-        {
-            Serial.println("An error has occurred while mounting FFat");
-            return;
-        }
 
         // Should load default config if run for the first time
-        Serial.println(F("Loading configuration..."));
-        loadConfiguration(filename, config);
-
-        // Dump config file
-        Serial.println(F("Print config file..."));
-        printFile(filename);
+        // Serial.println(F("Loading configuration..."));
+        // loadConfiguration(config);
     }
 
     void update_loop()
@@ -36,10 +34,13 @@ namespace ConfigService
     // ########### INTERNAL METHODS
 
     // Loads the configuration from a file
-    void loadConfiguration(const char *filename, Config &config)
+    void loadConfiguration(BaseConfig &config)
     {
+        Serial.println("reading config file");
+        Serial.println(String(CONFIG_DIR) + config._filename);
+
         // Open file for reading
-        File file = FFat.open(filename, FILE_WRITE, true);
+        File file = FFat.open(String(CONFIG_DIR) + config._filename, FILE_READ);
 
         // Allocate a temporary JsonDocument
         // Don't forget to change the capacity to match your requirements.
@@ -49,44 +50,36 @@ namespace ConfigService
         // Deserialize the JSON document
         DeserializationError error = deserializeJson(doc, file);
         if (error)
-            Serial.println(F("Failed to read file, using default configuration"));
+            Serial.println(F("Deserialization failed, using default configuration"));
 
-        // Copy values from the JsonDocument to the Config
-        config.port = doc["port"] | 2731;
-        strlcpy(config.hostname,                 // <- destination
-                doc["hostname"] | "example.com", // <- source
-                sizeof(config.hostname));        // <- destination's capacity
+        config.setStruct(doc);
 
         // Close the file (Curiously, File's destructor doesn't close the file)
         file.close();
 
         // save defaults for next time loading.
         if (error)
-            saveConfiguration(filename, config);
+            saveConfiguration(config);
     }
 
     // Saves the configuration to a file
-    void saveConfiguration(const char *filename, const Config &config)
+    void saveConfiguration(const BaseConfig &config)
     {
+        Serial.println("writing config file");
+        Serial.println(CONFIG_DIR + config._filename);
+
         // Delete existing file, otherwise the configuration is appended to the file
-        FFat.remove(filename);
+        FFat.remove(String(CONFIG_DIR) + config._filename);
 
         // Open file for writing
-        File file = FFat.open(filename, FILE_WRITE);
+        File file = FFat.open(String(CONFIG_DIR) + config._filename, FILE_WRITE, true);
         if (!file)
         {
             Serial.println(F("Failed to create file"));
             return;
         }
-
-        // Allocate a temporary JsonDocument
-        // Don't forget to change the capacity to match your requirements.
-        // Use arduinojson.org/assistant to compute the capacity.
-        StaticJsonDocument<256> doc;
-
-        // Set the values in the document
-        doc["hostname"] = config.hostname;
-        doc["port"] = config.port;
+        StaticJsonDocument<512> doc;
+        config.setDoc(doc);
 
         // Serialize JSON to file
         if (serializeJson(doc, file) == 0)
@@ -99,10 +92,10 @@ namespace ConfigService
     }
 
     // Prints the content of a file to the Serial
-    void printFile(const char *filename)
+    void printFile(const String filename)
     {
         // Open file for reading
-        File file = FFat.open(filename);
+        File file = FFat.open(String(CONFIG_DIR) + filename);
         if (!file)
         {
             Serial.println(F("Failed to read file"));
@@ -118,5 +111,36 @@ namespace ConfigService
 
         // Close the file
         file.close();
+    }
+
+    void printDirectory(File dir, int numTabs)
+    {
+        while (true)
+        {
+
+            File entry = dir.openNextFile();
+            if (!entry)
+            {
+                // no more files
+                break;
+            }
+            for (uint8_t i = 0; i < numTabs; i++)
+            {
+                Serial.print('\t');
+            }
+            Serial.print(entry.name());
+            if (entry.isDirectory())
+            {
+                Serial.println("/");
+                printDirectory(entry, numTabs + 1);
+            }
+            else
+            {
+                // files have sizes, directories do not
+                Serial.print("\t\t");
+                Serial.println(entry.size(), DEC);
+            }
+            entry.close();
+        }
     }
 }

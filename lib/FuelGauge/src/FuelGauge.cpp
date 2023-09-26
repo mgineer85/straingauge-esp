@@ -1,10 +1,11 @@
 #include <FuelGauge.hpp>
 
-///
+Adafruit_MAX17048 maxlipo;
+
 namespace FuelGauge
 {
 
-    Adafruit_LC709203F lc;
+    Adafruit_MAX17048 battery_gauge;
 
     bool _batteryConnected = false;
     float _batteryCellPercent = 0;
@@ -13,19 +14,21 @@ namespace FuelGauge
     ///
     void initialize()
     {
-        Serial.println("\nFuel gauge LC709203F init");
+        Serial.println("\nFuel gauge init");
 
-        if (!lc.begin())
+        if (!battery_gauge.begin())
         {
-            Serial.println(F("Couldnt find LC709203F?\nMake sure a battery is plugged in! Continue regular checks"));
+            Serial.println(F("Couldnt find battery fuel gauge chip?\nMake sure a battery is plugged in! Continue regular checks"));
             _batteryConnected = false;
         }
+        else
+        {
+            _batteryConnected = true;
 
-        // has to be set, but not used
-        lc.setThermistorB(3950);
-
-        // use 1000mAh packages for product
-        lc.setPackSize(LC709203F_APA_1000MAH);
+            Serial.print(F("Found MAX17048"));
+            Serial.print(F(" with Chip ID: 0x"));
+            Serial.println(maxlipo.getChipID(), HEX);
+        }
     }
 
     float getBatteryPercent()
@@ -42,7 +45,7 @@ namespace FuelGauge
     {
         if (!_batteryConnected)
         {
-            if (lc.begin())
+            if (battery_gauge.begin())
             {
                 _batteryConnected = true;
             }
@@ -53,8 +56,11 @@ namespace FuelGauge
         }
         else
         {
-            _batteryCellPercent = lc.cellPercent();
-            _batteryVoltage = lc.cellVoltage();
+            _batteryCellPercent = battery_gauge.cellPercent();
+            _batteryCellPercent = _batteryCellPercent < 0 ? 0 : _batteryCellPercent;     // limit to 0%
+            _batteryCellPercent = _batteryCellPercent > 100 ? 100 : _batteryCellPercent; // limit to 100%
+
+            _batteryVoltage = battery_gauge.cellVoltage();
         }
     }
 

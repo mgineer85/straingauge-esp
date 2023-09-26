@@ -32,8 +32,7 @@
 
 #include <ArduinoJson.h>
 #include <stdio.h>
-#include <Preferences.h>
-Preferences main_preferences;
+#include <FFat.h>
 
 #include "ConfigService.hpp"
 #include "Webservice.hpp"
@@ -52,11 +51,48 @@ Button2 button;
 // eval: ok, other considered event busses: MicroQT, Automaton, TaskManagerIO, Eventually
 #include <DataEvent.hpp>
 using namespace esp32m;
+using namespace ConfigService;
+
+/////////////////////////////////////////////////////////////////
+// TODO: Placeholder
+struct SystemConfig : BaseConfig
+{
+public:
+  using BaseConfig::BaseConfig; // Inherit BaseConfig's constructors.
+
+  // data
+public:
+  String hostname;
+
+  String wifi_ssid;
+  String wifi_password;
+
+  // create doc from data
+  void setDoc(StaticJsonDocument<512> &doc) const
+  {
+    // Set the values in the document
+    doc["hostname"] = hostname;
+    doc["wifi_ssid"] = wifi_ssid;
+    doc["wifi_password"] = wifi_password;
+  };
+
+  // set data according to doc
+  void setStruct(StaticJsonDocument<512> const &doc)
+  {
+    // Copy values from the JsonDocument to the Config
+    hostname = doc["hostname"] | "sg-box";
+    wifi_ssid = doc["wifi_ssid"] | "chumbawumba";
+    wifi_password = doc["wifi_password"] | "Schneepflug";
+  };
+};
 
 ulong updateLastMillisFast = 0;
 ulong updateLastMillisSlow = 0;
 
-/////////////////////////////////////////////////////////////////
+SystemConfig systemConfig = SystemConfig("config_system.json");
+
+//////////////
+
 void pressed(Button2 &btn)
 {
   Serial.println("tare button pressed");
@@ -74,7 +110,26 @@ void setup()
   button.begin(BUTTON_PIN);
   button.setPressedHandler(pressed);
 
-  main_preferences.begin("main-app", false);
+  // init filesystem FFAT
+  if (!FFat.begin(false, ""))
+    Serial.println("An error has occurred while mounting FFat");
+  else
+    Serial.println("FFat mounted successfully");
+
+  Serial.println("Files on FFat:");
+  ConfigService::printDirectory(FFat.open("/"));
+
+  loadConfiguration(systemConfig);
+
+  // setup WiFi before webservice
+  WiFi.mode(WIFI_STA);
+  WiFi.hostname(systemConfig.hostname);
+  WiFi.begin(systemConfig.wifi_ssid, systemConfig.wifi_password);
+  if (WiFi.waitForConnectResult() != WL_CONNECTED)
+  {
+    Serial.printf("WiFi Failed!\n");
+    return;
+  }
 
   ConfigService::initialize();
   Display::initialize();
@@ -82,6 +137,11 @@ void setup()
   Loadcell::initialize();
   FuelGauge::initialize();
   Display::static_content(); // display static content after init all modules
+
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Hostname: ");
+  Serial.println(WiFi.getHostname());
 
   // after all inits set frequency to
   Wire.setClock(400000U); // 100kHz is default but has issues: https://github.com/espressif/esp-idf/issues/8770. testing 400k now (max of slaves)
@@ -114,8 +174,6 @@ void loop()
     Serial.print(Loadcell::getForce(), 0);
     Serial.print("\t");
     Serial.print(FuelGauge::getBatteryPercent(), 1);
-    Serial.print("\t");
-    Serial.print(FuelGauge::getBatteryVoltage(), 3);
   }
 
   if ((millis() - updateLastMillisSlow) > 4000)
