@@ -3,34 +3,20 @@
 #include <Arduino.h>
 #include <FFat.h>
 #include <ArduinoJson.h>
+#include "ConfigStructs.hpp"
 
 #define CONFIG_DIR "/config/"
 
-///
-namespace ConfigService
+class ConfigClass
 {
-    struct BaseConfig
-    {
-    public:
-        String _filename;
+public:
+    SystemConfig system_config = SystemConfig("config_system.json");
+    SensorConfig sensor_config = SensorConfig("config_sensor.json");
 
-        BaseConfig(String filename)
-        {
-            // warning! need to specify valid filename in child class.
-            _filename = filename;
-        }
-
-    public:
-        virtual void setDoc(StaticJsonDocument<512> &doc) const {};
-        virtual void setStruct(StaticJsonDocument<512> const &doc){};
-    };
-
-    void initialize();
-    void update_loop();
+    ConfigClass();
 
     void loadConfiguration(BaseConfig &config);
     void saveConfiguration(const BaseConfig &config);
+};
 
-    void printFile(const String filename);
-    void printDirectory(File dir, int numTabs = 2);
-}
+extern ConfigClass g_Config;

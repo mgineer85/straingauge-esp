@@ -3,11 +3,25 @@
 #include <Arduino.h>
 #include "Adafruit_MAX1704X.h"
 
-///
-namespace FuelGauge
+class FuelgaugeClass
 {
+private:
+    Adafruit_MAX17048 battery_gauge;
+
+    bool _batteryConnected = false;
+    float _batteryCellPercent = 0;
+    float _batteryVoltage = 0;
+    float _isCharging = false;
+
+public:
+    FuelgaugeClass();
+
     void initialize();
+    void update_loop();
+
     float getBatteryPercent();
     float getBatteryVoltage();
-    void update_loop();
-}
+    bool getIsCharging();
+};
+
+extern FuelgaugeClass g_Fuelgauge;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <events.hpp>
 #include <Arduino.h>
+#include <events.hpp>
 using namespace esp32m;
 
 class DataEvent : public Event
