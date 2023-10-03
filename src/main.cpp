@@ -1,10 +1,10 @@
 /*
   Strain Gauge Amplifier
-  By: Michael Gröne
-  Date: 2022-08-10
-  License: tbd
+  By: Michael G.
+  Date: 2023-10-03
+  License: MIT
 
-  Small mobile strain gauge amplifier with battery
+  Compact mobile strain gauge amplifier with battery
 
   Features:
     - mobile case 3d printed
@@ -23,26 +23,26 @@
   TODOs:
     - cleanup/refactor
     - Quasar webinterface
-    - test battery interface
-    - implement tare button functionality (GPIO0 button) using Button2 library.
-    - any use for GPIO13 LED on s2 board?
+    - any use for GPIO13 LED on board?
 
 
 */
 
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <FFat.h>
 
-#include "utils/filesystem.hpp"
-#include "ConfigService.hpp" // --> g_Config
-#include "Fuelgauge.hpp"     // --> g_Fuelgauge
-#include "Loadcell.hpp"      // --> g_Loadcell
+#include "System.hpp"    // --> g_System
+#include "Fuelgauge.hpp" // --> g_Fuelgauge
+#include "Loadcell.hpp"  // --> g_Loadcell
 #include "Webservice.hpp"
 #include "Display.hpp"
 
 #include "Button2.h"
 #define BUTTON_PIN 0
 Button2 button;
+
+SystemConfig system_config = SystemConfig("system.json");
 
 /*
  * Events to couple the modules...
@@ -56,7 +56,7 @@ using namespace esp32m;
 
 void pressed(Button2 &btn)
 {
-  Serial.println("tare button pressed");
+  log_i("tare button pressed");
 
   // send event to inform other modules to action
   Event ev("Loadcell/tare");
@@ -66,6 +66,8 @@ void pressed(Button2 &btn)
 void Task_Display(void *pvParameters)
 {
   (void)pvParameters;
+
+  Display::static_content(); // display static content after init all modules
 
   while (1) // A Task shall never return or exit.
   {
@@ -125,17 +127,19 @@ void Task_RegularInfoOut(void *pvParameters)
   {
     // events + data
     Webservice::invokeSendEvent("ping", String(millis()));
-    Webservice::invokeSendEvent("reading", String(g_Loadcell.getReading()));
-    Webservice::invokeSendEvent("force", String(g_Loadcell.getForce(), 0));
+    Webservice::invokeSendEvent("reading", String(g_Loadcell.getReadingRaw()));
+    Webservice::invokeSendEvent("force", String(g_Loadcell.getReadingDisplayunitFiltered(), 0));
     Webservice::invokeSendEvent("battery", String(g_Fuelgauge.getBatteryPercent(), 1));
 
     // send debug information
     Serial.println();
-    Serial.print(g_Loadcell.getReading());
+    Serial.print(g_Loadcell.getReadingRaw());
     Serial.print("\t");
-    Serial.print(g_Loadcell.getForce(), 0);
+    Serial.print(g_Loadcell.getReadingDisplayunitFiltered(), 0);
     Serial.print("\t");
     Serial.print(g_Fuelgauge.getBatteryPercent(), 1);
+    Serial.print("\t");
+    Serial.print(g_Fuelgauge.getChargeRate(), 1);
     Serial.print("\t");
     Serial.print(g_Fuelgauge.getIsCharging());
 
@@ -145,64 +149,26 @@ void Task_RegularInfoOut(void *pvParameters)
 
 void setup()
 {
-  // delay(200); // wait for all modules to start up before init communication. without this delay some modules lead to freezing program because the I2C communication fails.
   Serial.begin(115200);
+  Serial.setDebugOutput(true);
+
+  log_i("Starting strain gauge box");
 
   // early init phase
   Display::initialize();
   Display::status_message("display initialized");
 
-  // init filesystem FFAT
-  if (!FFat.begin(false, ""))
-  {
-    Display::status_message("Error mounting filesystem! Halted.");
-    while (true)
-      ;
-  }
-  else
-  {
-    Display::status_message("filesystem mounted successfully");
-  }
-
-  Serial.println("Files on FFat:");
-  printDirectory(FFat.open("/"));
-
-  // g_MyConfigInstance.printsomevarsfortesting(); // works nice
-  // TODO: loadConfiguration(systemConfig);
-
-  // setup WiFi before webservice
-  Display::status_message("WiFi connecting...");
-  WiFi.mode(WIFI_STA);
-  WiFi.hostname(g_Config.system_config.hostname);
-  WiFi.begin(g_Config.system_config.wifi_ssid, g_Config.system_config.wifi_password);
-  Serial.print("Connect to WiFi, SSID: ");
-  Serial.println(g_Config.system_config.wifi_ssid);
-  if (WiFi.waitForConnectResult(10000UL) != WL_CONNECTED)
-  {
-    Display::status_message("WiFi Failed! Halted.");
-    while (true)
-      ;
-  }
-
-  Display::status_message("WiFi connected.");
+  // onetime load system config on start, also setup filesystem+wifi
+  g_System.initialize();
 
   // later init phase
   xTaskCreatePinnedToCore(Task_Buttons, "Task_Buttons", 4096, NULL, 2, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(Task_Loadcell, "Task_Loadcell", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(Task_Fuelgauge, "Task_Fuelgauge", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
-  Webservice::initialize();
-  Display::static_content(); // display static content after init all modules
   xTaskCreatePinnedToCore(Task_Display, "Task_Display", 4096, NULL, 2, NULL, ARDUINO_RUNNING_CORE);
-
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("Hostname: ");
-  Serial.println(WiFi.getHostname());
+  Webservice::initialize();
 
   Display::status_message("Ready.");
-
-  // after all inits set frequency to
-  Wire.setClock(400000U); // 100kHz is default but has issues: https://github.com/espressif/esp-idf/issues/8770. testing 400k now (max of slaves)
 
   xTaskCreatePinnedToCore(Task_RegularInfoOut, "Task_RegularInfoOut", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
 }

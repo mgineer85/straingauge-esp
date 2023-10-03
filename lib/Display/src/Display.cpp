@@ -18,7 +18,7 @@ namespace Display
 
     const u8g2_uint_t line1 = 8;
     const u8g2_uint_t line2 = (line1 + 4) + 25;
-    const u8g2_uint_t line3 = (line2 + 4) + 8;
+    const u8g2_uint_t line3 = (line2 + 4) + 10;
     const u8g2_uint_t line4 = display_height;
 
     ///
@@ -30,11 +30,11 @@ namespace Display
         // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
         if (!display.begin())
         {
-            Serial.println(F("Display begin failed, freezing..."));
+            log_e("Display begin failed, freezing...");
             for (;;)
                 ; // Don't proceed, loop forever
         }
-        Serial.println(F("Display initialized"));
+        log_v("Display initialized");
 
         // Init
         status_message("pls wait, starting...");
@@ -48,8 +48,7 @@ namespace Display
         display.sendBuffer();                                      // transfer internal memory to the display
 
         // for debug: also print to serial
-        Serial.print("DISPLAY::status_message: ");
-        Serial.println(message);
+        log_i("%s", message.c_str());
 
         lastMillisStatusMessage = millis();
     }
@@ -78,38 +77,40 @@ namespace Display
         /*
         display: 128x64
 
-        8: statusbar (displayunit, battery)
-        24: value in displayunit
-        8: line up to range
+        line1: 8: statusbar (displayunit, battery)
+        line2: 24: value in displayunit
+        line3: 8: line up to range
 
-        -8: statusmessage (up to 2 secs)
+        line4: -8: statusmessage (up to 2 secs)
         */
 
         display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
 
         // displayunit unit
-        display.drawStr(0, line1, "[N]");
+        display.drawStr(0, line1, (String("[") + String(g_Loadcell.sensor_config.displayunit) + String("]")).c_str());
+        // fullrange
+        display.drawStr(60, line1, (String(g_Loadcell.sensor_config.fullrange, 1) + String(g_Loadcell.sensor_config.displayunit)).c_str());
+
+        // sensitivity
+        display.drawStr(0, line3, String(g_Loadcell.sensor_config.sensitivity, 5).c_str());
+        // zerobalance
+        display.drawStr(64, line3, String(g_Loadcell.sensor_config.zerobalance, 5).c_str());
     }
 
     void update_loop()
     {
         char buf[10];
 
-        if ((millis() - lastMillisStatusMessage) > 2000)
-        {
-            // clear last status message if older than xxxx milliseconds
-            static_content();
-        }
+        // if ((millis() - lastMillisStatusMessage) > 2000)
+        // {
+        //     // clear last status message if older than xxxx milliseconds
+        // }
+        static_content();
 
         // value in displayunit
         display.setFont(u8g2_font_inr24_mn); // choose a suitable font
-        sprintf(buf, "%5.0f", g_Loadcell.getForce());
+        sprintf(buf, "%5.0f", g_Loadcell.getReadingDisplayunitFiltered());
         display.drawStr(0, line2, buf);
-
-        // battery
-        display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-        sprintf(buf, "%3.0f%%", g_Fuelgauge.getBatteryPercent());
-        display.drawStr(60, line1, buf);
 
         draw_battery_icon(g_Fuelgauge.getBatteryPercent());
 

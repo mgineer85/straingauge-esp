@@ -1,7 +1,5 @@
 #include <Fuelgauge.hpp>
 
-#define IS_CHARGING_THRESHOLD 0.2
-
 FuelgaugeClass g_Fuelgauge;
 
 FuelgaugeClass::FuelgaugeClass()
@@ -11,31 +9,34 @@ FuelgaugeClass::FuelgaugeClass()
 void FuelgaugeClass::initialize()
 {
 
-    Serial.println("\nFuel gauge init");
+    log_i("Fuelgauge init");
 
     if (!battery_gauge.begin())
     {
-        Serial.println(F("Couldnt find battery fuel gauge chip?\nMake sure a battery is plugged in! Continue regular checks"));
+        log_e("Couldnt find battery fuel gauge chip?\nMake sure a battery is plugged in! Continue regular checks");
         _batteryConnected = false;
     }
     else
     {
         _batteryConnected = true;
 
-        Serial.print(F("Found MAX17048"));
-        Serial.print(F(" with Chip ID: 0x"));
-        Serial.println(battery_gauge.getChipID(), HEX);
+        log_i("Found MAX17048, ID 0x%02hhx", battery_gauge.getChipID());
     }
 }
 
 float FuelgaugeClass::getBatteryPercent()
 {
-    return (_batteryConnected) ? _batteryCellPercent : 0;
+    return (_batteryConnected) ? _batteryCellPercent : 0.0;
 }
 
 float FuelgaugeClass::getBatteryVoltage()
 {
-    return (_batteryConnected) ? _batteryVoltage : 0;
+    return (_batteryConnected) ? _batteryVoltage : 0.0;
+}
+
+float FuelgaugeClass::getChargeRate()
+{
+    return (_batteryConnected) ? _chargeRate : 0.0;
 }
 
 bool FuelgaugeClass::getIsCharging()
@@ -64,6 +65,8 @@ void FuelgaugeClass::update_loop()
 
         _batteryVoltage = battery_gauge.cellVoltage();
 
-        _isCharging = (battery_gauge.chargeRate() >= IS_CHARGING_THRESHOLD) ? true : false;
+        _chargeRate = battery_gauge.chargeRate();
+
+        _isCharging = (_chargeRate > 0.0 && _batteryCellPercent < 100) ? true : false;
     }
 }

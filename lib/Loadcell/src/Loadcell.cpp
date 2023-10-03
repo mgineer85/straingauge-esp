@@ -13,13 +13,13 @@ void LoadcellClass::initialize(void)
 
     if (!nau7802_adc.begin())
     {
-        Serial.println("Scale not detected. Please check wiring. Retry...");
+        log_w("Scale not detected. Please check wiring. Retry...");
         delay(1000);
         if (!nau7802_adc.begin())
-            Serial.println("Scale not detected in second run. Ignoring...");
+            log_e("Scale not detected in second run. Ignoring...");
     }
 
-    this->readSystemSettings(); // Load zeroOffset and calibrationFactor from EEPROM
+    this->cbLoadConfiguration(); // Load zeroOffset and calibrationFactor from EEPROM
 
     nau7802_adc.setChannel(NAU7802_CHANNEL_1);
     nau7802_adc.setSampleRate(NAU7802_SPS_10); // Increase to max sample rate
@@ -28,37 +28,27 @@ void LoadcellClass::initialize(void)
 
     // Re-cal analog front end when we change gain, sample rate, or channel
     if (!nau7802_adc.calibrateAFE())
-        Serial.println("internal ADC calibration failed!");
+        log_e("internal ADC calibration failed!");
     else
-        Serial.println("internal ADC calibration successfull.");
+        log_i("internal ADC calibration successfull.");
 
     // register events
-    EventManager::instance().subscribe([&](Event *ev)
-                                       {
-            if (ev->is("Loadcell/setCalibrationFactor"))
-            {
-                Serial.println("Loadcell/setCalibrationFactor");
-                Serial.println(((DataEvent *)ev)->data());
-
-                this->cmdSetCalibrationFactor(((DataEvent *)ev)->data().toFloat());
-            } });
 
     // commands
     EventManager::instance().subscribe([&](Event *ev)
                                        {
             if (ev->is("Loadcell/tare"))
             {
-                Serial.println("Loadcell/tare");
+                log_d("Loadcell/tare");
 
-                this->cmdTare();
+                this->cmdZeroOffsetTare();
             } });
 
     EventManager::instance().subscribe([&](Event *ev)
                                        {
             if (ev->is("Loadcell/calibrateToKnownValue"))
             {
-                Serial.println("Loadcell/calibrateToKnownValue");
-                Serial.println(((DataEvent *)ev)->data());
+                log_d("Loadcell/calibrateToKnownValue, value %s", ((DataEvent *)ev)->data());
 
                 this->cmdCalcCalibrationFactor(((DataEvent *)ev)->data().toFloat());
         } });
@@ -67,59 +57,59 @@ void LoadcellClass::initialize(void)
                                        {
             if (ev->is("*/saveconfiguration"))
             {
-                Serial.println("Loadcell/saveconfiguration");
+                log_d("Loadcell/saveconfiguration");
 
-                this->recordSystemSettings();
+                this->cbSaveConfiguration();
         } });
 
     EventManager::instance().subscribe([&](Event *ev)
                                        {
             if (ev->is("*/loadconfiguration"))
             {
-                Serial.println("Loadcell/loadconfiguration");
+                log_d("Loadcell/loadconfiguration");
 
-                this->readSystemSettings();
+                this->cbLoadConfiguration();
         } });
 }
 
-// Record the current system settings to EEPROM
-void LoadcellClass::recordSystemSettings(void)
+void LoadcellClass::cbSaveConfiguration(void)
 {
-    // TODO: ConfigService::saveConfiguration(sensorConfig);
+    sensor_config.saveConfiguration();
 }
-
-// Reads the current system settings from EEPROM
-// If anything looks weird, reset setting to default value
-void LoadcellClass::readSystemSettings(void)
+void LoadcellClass::cbLoadConfiguration(void)
 {
-    // TODO: ConfigService::loadConfiguration(sensorConfig);
+    sensor_config.loadConfiguration();
+    postConfigChange();
+}
+void LoadcellClass::postConfigChange(void)
+{
 
-    float sensor_scale_factor = ((float)adc_resolution * gain * (g_Config.sensor_config.sensitivity)) / (1000.0 * g_Config.sensor_config.fullrange);
-    int32_t sensor_zero_balance_raw = (int)round(g_Config.sensor_config.zerobalance * (float)adc_resolution * gain / 1000.0);
+    float sensor_scale_factor = ((float)adc_resolution * gain * (sensor_config.sensitivity)) / (1000.0 * sensor_config.fullrange);
+    int32_t sensor_zero_balance_raw = (int)round(sensor_config.zerobalance * (float)adc_resolution * gain / 1000.0);
 
     nau7802_adc.setCalibrationFactor(sensor_scale_factor);
     nau7802_adc.setZeroOffset(sensor_zero_balance_raw);
 
-    Serial.print("Zero offset: ");
-    Serial.println(nau7802_adc.getZeroOffset());
-    Serial.print("Calibration factor: ");
-    Serial.println(nau7802_adc.getCalibrationFactor());
+    log_i("Zero offset: %i", nau7802_adc.getZeroOffset());
+    log_i("Calibration factor: %0.2f", nau7802_adc.getCalibrationFactor());
+
+    nau7802_adc.calibrateAFE();
 }
 
 // getter for external readout
-int32_t LoadcellClass::getReading()
+int32_t LoadcellClass::getReadingRaw()
 {
     return nau7802_adc.getReading();
 }
-float LoadcellClass::getForce()
+float LoadcellClass::getReadingDisplayunitFiltered()
 {
-    return filterForceAverage.getAverage();
+    return _readingDisplayunitFiltered.getAverage();
 }
 
 // commands triggered externally
-void LoadcellClass::cmdTare()
+void LoadcellClass::cmdZeroOffsetTare()
 {
-    nau7802_adc.calculateZeroOffset(8);
+    nau7802_adc.calculateZeroOffset(4); // TODO: needs fix: if 8 averages, Sparkfun lib times out and silently returns 0!
 
     DataEvent ev("Webservice/sendMessage", "new zero offset: " + String(nau7802_adc.getZeroOffset()));
     EventManager::instance().publish(ev);
@@ -135,22 +125,11 @@ void LoadcellClass::cmdCalcCalibrationFactor(float weightOnScale)
     DataEvent ev("Webservice/sendMessage", "new calibraction factor: " + String(nau7802_adc.getCalibrationFactor()));
     EventManager::instance().publish(ev);
 }
-void LoadcellClass::cmdSetCalibrationFactor(float factor)
-{
-    nau7802_adc.setCalibrationFactor(factor);
-}
-void LoadcellClass::cmdInternalCalibration()
-{
-    nau7802_adc.calibrateAFE();
-
-    DataEvent ev("Webservice/sendMessage", String("internal calibration finished"));
-    EventManager::instance().publish(ev);
-}
 
 void LoadcellClass::update_loop()
 {
     if (nau7802_adc.available() == true)
     {
-        filterForceAverage.add(nau7802_adc.getWeight(true, 1)); // getWeight means actually receiving the reading divided by the calibration factor to convert to SI-unit. We calibrate for N, so this is it.
+        _readingDisplayunitFiltered.add(nau7802_adc.getWeight(true, 1)); // getWeight means actually receiving the reading divided by the calibration factor to convert to SI-unit. We calibrate for N, so this is it.
     }
 }

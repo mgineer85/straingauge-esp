@@ -6,7 +6,8 @@
 #include "SparkFun_Qwiic_Scale_NAU7802_Arduino_Library.h" // Click here to get the library: http://librarymanager/All#SparkFun_NAU8702
 #include <RunningMedian.h>
 #include <DataEvent.hpp>
-#include <ConfigService.hpp>
+#include <ConfigStructs.hpp>
+// #include <Adafruit_NAU7802.h>
 
 using namespace esp32m;
 
@@ -21,7 +22,7 @@ private:
     };
 
     NAU7802 nau7802_adc; // Create instance of the NAU7802 class
-    RunningMedian filterForceAverage = RunningMedian(AVG_SIZE);
+    RunningMedian _readingDisplayunitFiltered = RunningMedian(AVG_SIZE);
 
     const int32_t adc_resolution = 1 << 24;
     const uint8_t gain = 128;
@@ -40,24 +41,24 @@ private:
     // String sensor_displayunit = "kg";
 
 public:
+    SensorConfig sensor_config = SensorConfig("sensor.json");
+
     LoadcellClass();
 
     void initialize();
     void update_loop();
 
     // getter for external readout
-    int32_t getReading();
-    float getWeight();
-    float getForce();
+    int32_t getReadingRaw();
+    float getReadingDisplayunitFiltered();
 
     // commands triggered externally
-    void cmdTare();
-    void cmdCalcCalibrationFactor(float weightOnScale);
-    void cmdSetCalibrationFactor(float factor);
-    void cmdInternalCalibration();
+    void cmdZeroOffsetTare();
+    void cmdCalcCalibrationFactor(float knownReference);
 
-    void readSystemSettings(void);
-    void recordSystemSettings(void);
+    void cbSaveConfiguration(void);
+    void cbLoadConfiguration(void);
+    void postConfigChange(void);
 };
 
 extern LoadcellClass g_Loadcell;

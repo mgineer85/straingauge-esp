@@ -11,7 +11,8 @@ private:
     bool _batteryConnected = false;
     float _batteryCellPercent = 0;
     float _batteryVoltage = 0;
-    float _isCharging = false;
+    float _chargeRate = 0;
+    bool _isCharging = false;
 
 public:
     FuelgaugeClass();
@@ -21,6 +22,7 @@ public:
 
     float getBatteryPercent();
     float getBatteryVoltage();
+    float getChargeRate();
     bool getIsCharging();
 };
 

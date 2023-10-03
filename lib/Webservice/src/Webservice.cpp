@@ -1,5 +1,9 @@
 #include <Webservice.hpp>
 
+#include <System.hpp>    // -->g_System
+#include <Fuelgauge.hpp> // -->g_Fuelgauge
+#include <Loadcell.hpp>  // -->g_Loadcell
+
 using namespace esp32m;
 
 namespace Webservice
@@ -24,7 +28,7 @@ namespace Webservice
             AsyncResponseStream *response = request->beginResponseStream("application/json");
             DynamicJsonDocument json(1024);
             json["wifi_status"] = WiFi.status();
-            json["wifi_ssid"] = WiFi.SSID();
+            json["wifi_sta_ssid"] = WiFi.SSID();
             json["wifi_ip"] = WiFi.localIP().toString();
             json["wifi_hostname"] = WiFi.getHostname();
             serializeJson(json, *response);
@@ -82,33 +86,32 @@ namespace Webservice
     }
 
     // simple commands
-    void
-    route_api_cmd_init()
+    void route_api_cmd_init()
     {
-        // Send a POST request to <IP>/post with a form field message set to <message>
-        server.on("/api/cmd/tare", HTTP_POST, [](AsyncWebServerRequest *request)
+        // Send a HTTP_GET request to <IP>/post with a form field message set to <message>
+        server.on("/api/cmd/tare", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
-                    Serial.print("webserver tare triggered");
+                    log_i("webserver tare triggered");
 
                     if (cb_api_cmd_tare())
                         request->send(200, "text/plain", "OK");
 
                     request->send(400, "text/plain", "request error"); });
 
-        // Send a POST request to <IP>/post with a form field message set to <message>
-        server.on("/api/cmd/loadconfiguration", HTTP_POST, [](AsyncWebServerRequest *request)
+        // Send a HTTP_GET request to <IP>/post with a form field message set to <message>
+        server.on("/api/cmd/loadconfiguration", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
-                    Serial.print("webserver loadconfiguration triggered");
+                    log_i("webserver loadconfiguration triggered");
 
                     if (cb_api_cmd_load_configuration())
                         request->send(200, "text/plain", "OK");
 
                     request->send(400, "text/plain", "request error"); });
 
-        // Send a POST request to <IP>/post with a form field message set to <message>
-        server.on("/api/cmd/saveconfiguration", HTTP_POST, [](AsyncWebServerRequest *request)
+        // Send a HTTP_GET request to <IP>/post with a form field message set to <message>
+        server.on("/api/cmd/saveconfiguration", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
-                    Serial.print("webserver saveconfiguration triggered");
+                    log_i("webserver saveconfiguration triggered");
 
                     if (cb_api_cmd_save_configuration())
                         request->send(200, "text/plain", "OK");
@@ -118,7 +121,7 @@ namespace Webservice
         // Send a POST request to <IP>/post with a form field message set to <message>
         server.on("/api/cmd/calibrateknownreference", HTTP_POST, [](AsyncWebServerRequest *request)
                   {
-                    Serial.print("webserver calibrateknownreference triggered");
+                    log_i("webserver calibrateknownreference triggered");
 
                     //validation
                     if (!request->hasParam("knownValue", true))
@@ -161,41 +164,50 @@ namespace Webservice
         // server.addHandler(handler);
         server.on("/api/config/test", HTTP_ANY, [](AsyncWebServerRequest *request)
                   {
-            Serial.print("webserver api/config triggered");
+            log_i("webserver api/config triggered");
             int params = request->params();
             for (int i = 0; i < params; i++)
             {
                 AsyncWebParameter *p = request->getParam(i);
                 if (p->isFile())
                 { // p->isPost() is also true
-                    Serial.printf("FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
+                    log_d("FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
                 }
                 else if (p->isPost())
                 {
-                    Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+                    log_d("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
                 }
                 else
                 {
-                    Serial.printf("GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+                    log_d("GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
                 }
             }
             request->send(200, "text/plain", "OK"); });
 
         server.on("/api/config/sensor", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
-                    Serial.print("webserver api/config/system triggered");
+                    log_i("webserver api/config/system triggered");
 
-                    g_Config.sensor_config.sensitivity+=0.1;
-                    Serial.print(g_Config.sensor_config.sensitivity); 
+                    g_Loadcell.sensor_config.sensitivity+=0.1;
+                    log_d("sensitivity: %0.5f",g_Loadcell.sensor_config.sensitivity);
                     //g_Config.printsomevarsfortesting();
 
-                    printFile(String(CONFIG_DIR) + g_Config.sensor_config._filename);
-                    
-                    g_Config.saveConfiguration(g_Config.sensor_config);
+                    g_System.printFile(String(CONFIG_DIR) + g_Loadcell.sensor_config._filename);
 
-                    printDirectory(FFat.open("/"));
+                    g_Loadcell.cbSaveConfiguration();
+
+                    g_System.printDirectory(FFat.open("/"));
+
+                    g_Loadcell.cbLoadConfiguration();
 
                     request->send(200, "text/plain", "OK"); });
+
+        server.on("/api/cmd/restart", HTTP_GET, [](AsyncWebServerRequest *request)
+                  {
+                      log_i("webserver api/cmd/restart triggered");
+                      request->send(200, "text/plain", "OK");
+
+                      ESP.restart(); });
     }
 
     void route_sse_init()
@@ -205,7 +217,7 @@ namespace Webservice
         events.onConnect([](AsyncEventSourceClient *client)
                          {
             if(client->lastId()){
-                Serial.printf("Client reconnected! Last message ID that it gat is: %u\n", client->lastId());
+                log_i("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
             }
             
             client->send("init event session",NULL, millis(), 1000); });
@@ -220,7 +232,6 @@ namespace Webservice
 
     void routes_init()
     {
-        route_webapp_init();
 
         route_status_init();
 
@@ -229,6 +240,9 @@ namespace Webservice
         route_api_config_init();
 
         route_sse_init();
+
+        // last init webapp - if noting else catched, this is kind of catchall before 404
+        route_webapp_init();
 
         server.onNotFound(route_notfound_init);
     }
@@ -239,8 +253,8 @@ namespace Webservice
                                            {
             if (ev->is("Webservice/sendMessage"))
             {
-                Serial.println("Webservice/sendMessage");
-                Serial.println(((DataEvent *)ev)->data());
+                log_i("Webservice/sendMessage");
+                log_d("%s",((DataEvent *)ev)->data().c_str());
 
                 invokeSendEvent("message", ((DataEvent *)ev)->data());
         } });
