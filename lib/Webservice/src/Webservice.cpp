@@ -144,6 +144,7 @@ namespace Webservice
     // api/config update requests
     void route_api_config_init()
     {
+        // GET config
         server.on("/api/config", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
             log_i("webserver /api/config triggered");
@@ -157,6 +158,7 @@ namespace Webservice
             g_System.system_config.toDoc(system);
             g_Loadcell.sensor_config.toDoc(loadcell);
 
+            // https://arduino.stackexchange.com/a/94216
             response_json[F("system")] = system;
             response_json[F("loadcell")] = loadcell;
 
@@ -164,24 +166,36 @@ namespace Webservice
 
             request->send(response); });
 
-        AsyncCallbackJsonWebHandler *handlerSystemConfig = new AsyncCallbackJsonWebHandler("/api/config/system", [](AsyncWebServerRequest *request, JsonVariant json)
-                                                                                           {
-                                                                                    //POST/PUT/PATCH
-                                                                                    g_System.system_config.fromWeb(json);
-
-                                                                                    String response = "{\"status\":\"OK\"}";
-                                                                                    request -> send(200, "application/json", response); });
-        server.addHandler(handlerSystemConfig);
-
-        AsyncCallbackJsonWebHandler *handlerSensorConfig = new AsyncCallbackJsonWebHandler("/api/config/loadcell", [](AsyncWebServerRequest *request, JsonVariant json)
-                                                                                           {
-                                                                                    //POST/PUT/PATCH
-                                                                                    g_Loadcell.sensor_config.fromWeb(json);
+        // POST/PUT/PATCH config
+        AsyncCallbackJsonWebHandler *handlerCfg = new AsyncCallbackJsonWebHandler("/api/config", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                                                  {
+                                                                                    
+                                                                                    g_System.system_config.fromWeb(json["system"]);
+                                                                                    g_Loadcell.sensor_config.fromWeb(json["loadcell"]);
                                                                                     g_Loadcell.postConfigChange();
 
                                                                                     String response = "{\"status\":\"OK\"}";
                                                                                     request -> send(200, "application/json", response); });
-        server.addHandler(handlerSensorConfig);
+        server.addHandler(handlerCfg);
+
+        // AsyncCallbackJsonWebHandler *handlerSystemConfig = new AsyncCallbackJsonWebHandler("/api/config/system", [](AsyncWebServerRequest *request, JsonVariant json)
+        //                                                                                    {
+        //                                                                             //POST/PUT/PATCH
+        //                                                                             g_System.system_config.fromWeb(json);
+
+        //                                                                             String response = "{\"status\":\"OK\"}";
+        //                                                                             request -> send(200, "application/json", response); });
+        // server.addHandler(handlerSystemConfig);
+
+        // AsyncCallbackJsonWebHandler *handlerSensorConfig = new AsyncCallbackJsonWebHandler("/api/config/loadcell", [](AsyncWebServerRequest *request, JsonVariant json)
+        //                                                                                    {
+        //                                                                             //POST/PUT/PATCH
+        //                                                                             g_Loadcell.sensor_config.fromWeb(json);
+        //                                                                             g_Loadcell.postConfigChange();
+
+        //                                                                             String response = "{\"status\":\"OK\"}";
+        //                                                                             request -> send(200, "application/json", response); });
+        // server.addHandler(handlerSensorConfig);
     }
 
     void route_sse_init()
