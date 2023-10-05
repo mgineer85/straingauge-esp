@@ -22,6 +22,10 @@ public:
     void initialize_filesystem();
     void initialize_wifi();
 
+    void cbSaveConfiguration(void);
+    void cbLoadConfiguration(void);
+    void postConfigChange(void);
+
     void update_loop();
 
     void printFilesystemFiles();

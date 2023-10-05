@@ -14,25 +14,29 @@ using namespace esp32m;
 class LoadcellClass
 {
 private:
-    struct AmplifierConfig
-    {
-        int gain;
-        int samplerate;
-        int average;
-    };
+    // struct AmplifierConfig
+    // {
+    //     int gain;
+    //     int samplerate;
+    //     int average;
+    // };
 
-    Adafruit_NAU7802 nau7802_adc; // Create instance of the NAU7802 class
-    RunningMedian _readingDisplayunitFiltered = RunningMedian(AVG_SIZE);
+    // Create instance of the NAU7802 class
+    Adafruit_NAU7802 nau7802_adc;
 
+    // settings, constants, ...
     const int32_t adc_resolution = 1 << 24;
     const NAU7802_SampleRate sample_rate = NAU7802_RATE_10SPS;
     const NAU7802_Gain gain = NAU7802_GAIN_128;
     const NAU7802_LDOVoltage ldo_voltage = NAU7802_3V0;
 
+    // temporary results to convert readings to displayunit
     float sensor_scale_factor = 0;
     int32_t sensor_zero_balance_raw = 0;
 
+    // readings and converted readings
     int32_t current_reading_raw = 0;
+    RunningMedian _readingDisplayunitFiltered = RunningMedian(AVG_SIZE);
 
     /* Burster 6005 S/N 668862 */
     // float sensor_fullrange = 5000;

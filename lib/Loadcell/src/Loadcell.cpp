@@ -21,24 +21,6 @@ void LoadcellClass::initialize(void)
 
     this->cbLoadConfiguration(); // Load zeroOffset and calibrationFactor from EEPROM
 
-    nau7802_adc.setRate(sample_rate); // Increase to max sample rate
-    nau7802_adc.setGain(gain);
-    nau7802_adc.setLDO(ldo_voltage);
-
-    // Take 10 readings to flush out readings
-    for (uint8_t i = 0; i < 10; i++)
-    {
-        while (!nau7802_adc.available())
-            delay(1);
-        nau7802_adc.read();
-    }
-
-    // Re-cal analog front end when we change gain, sample rate, or channel
-    if (!nau7802_adc.calibrate(NAU7802_CALMOD_INTERNAL))
-        log_e("internal ADC calibration failed!");
-    else
-        log_i("internal ADC calibration successful.");
-
     // register events
 
     // commands
@@ -90,6 +72,7 @@ void LoadcellClass::cbLoadConfiguration(void)
 }
 void LoadcellClass::postConfigChange(void)
 {
+    log_i("postConfigChange triggered");
 
     sensor_scale_factor = ((float)adc_resolution * (float)(1 << gain) * (sensor_config.sensitivity)) / (1000.0 * sensor_config.fullrange);
     sensor_zero_balance_raw = (int)round(sensor_config.zerobalance * (float)adc_resolution * (float)(1 << gain) / 1000.0);
@@ -97,7 +80,23 @@ void LoadcellClass::postConfigChange(void)
     log_i("sensor_scale_factor: %0.2f", sensor_scale_factor);
     log_i("sensor_zero_balance_raw: %i", sensor_zero_balance_raw);
 
-    nau7802_adc.calibrate(NAU7802_CALMOD_INTERNAL);
+    nau7802_adc.setRate(sample_rate);
+    nau7802_adc.setGain(gain);
+    nau7802_adc.setLDO(ldo_voltage);
+
+    // Take 4 readings to flush out readings
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        while (!nau7802_adc.available())
+            delay(1);
+        nau7802_adc.read();
+    }
+
+    // Re-cal analog front end when we change gain, sample rate, or channel
+    if (!nau7802_adc.calibrate(NAU7802_CALMOD_INTERNAL))
+        log_e("internal ADC calibration failed!");
+    else
+        log_i("internal ADC calibration successful.");
 }
 
 // getter for external readout

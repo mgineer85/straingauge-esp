@@ -29,7 +29,6 @@
 */
 
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <FFat.h>
 
 #include "System.hpp"    // --> g_System

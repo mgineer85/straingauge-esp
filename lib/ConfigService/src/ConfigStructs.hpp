@@ -1,6 +1,7 @@
 #pragma once
 
 #define CONFIG_DIR "/config/"
+#define MAX_DOCUMENT_SIZE 1024
 
 #include <Arduino.h>
 #include <FFat.h>
@@ -18,8 +19,9 @@ public:
     }
 
 public:
-    virtual void toJson(StaticJsonDocument<512> &doc) const {};
-    virtual void fromJson(StaticJsonDocument<512> const &doc){};
+    virtual void toDoc(DynamicJsonDocument &doc) const {};
+    virtual void fromDoc(DynamicJsonDocument const &doc){};
+    virtual void fromWeb(JsonVariant variant){};
 
     // Loads the configuration from a file
     void loadConfiguration()
@@ -33,14 +35,14 @@ public:
         // Allocate a temporary JsonDocument
         // Don't forget to change the capacity to match your requirements.
         // Use arduinojson.org/v6/assistant to compute the capacity.
-        StaticJsonDocument<512> doc;
+        DynamicJsonDocument doc(MAX_DOCUMENT_SIZE);
 
         // Deserialize the JSON document
         DeserializationError error = deserializeJson(doc, file);
         if (error)
             log_e("Deserialization failed, using default configuration");
 
-        this->fromJson(doc);
+        this->fromDoc(doc);
 
         // Close the file (Curiously, File's destructor doesn't close the file)
         file.close();
@@ -66,8 +68,8 @@ public:
             log_e("Failed to create file");
             return;
         }
-        StaticJsonDocument<512> doc;
-        this->toJson(doc);
+        DynamicJsonDocument doc(MAX_DOCUMENT_SIZE);
+        this->toDoc(doc);
 
         // Serialize JSON to file
         if (serializeJson(doc, file) == 0)
@@ -95,9 +97,10 @@ public:
     String wifi_sta_password = "";
 
     // create doc from data
-    void toJson(StaticJsonDocument<512> &doc) const
+    void toDoc(DynamicJsonDocument &doc) const
     {
         // Set the values in the document
+        Serial.println(doc["hostname"].as<String>());
         doc["hostname"] = hostname;
         doc["wifi_ap_mode"] = wifi_ap_mode;
         doc["wifi_ap_ssid"] = wifi_ap_ssid;
@@ -107,15 +110,33 @@ public:
     };
 
     // set data according to doc
-    void fromJson(StaticJsonDocument<512> const &doc)
+    void fromDoc(DynamicJsonDocument const &doc)
     {
         // Copy values from the JsonDocument to the Config
+        Serial.println(doc["hostname"].as<String>());
         hostname = doc["hostname"] | hostname;
         wifi_ap_mode = doc["wifi_ap_mode"] | wifi_ap_mode;
         wifi_ap_ssid = doc["wifi_ap_ssid"] | wifi_ap_ssid;
         wifi_ap_password = doc["wifi_ap_password"] | wifi_ap_password;
         wifi_sta_ssid = doc["wifi_sta_ssid"] | wifi_sta_ssid;
         wifi_sta_password = doc["wifi_sta_password"] | wifi_sta_password;
+    };
+    // set data according to doc
+    void fromWeb(JsonVariant variant)
+    {
+        // Copy values from the variant to the Config
+        if (!variant["hostname"].isNull())
+            hostname = variant["hostname"].as<String>();
+        if (!variant["wifi_ap_mode"].isNull())
+            wifi_ap_mode = variant["wifi_ap_mode"].as<bool>();
+        if (!variant["wifi_ap_ssid"].isNull())
+            wifi_ap_ssid = variant["wifi_ap_ssid"].as<String>();
+        if (!variant["wifi_ap_password"].isNull())
+            wifi_ap_password = variant["wifi_ap_password"].as<String>();
+        if (!variant["wifi_sta_ssid"].isNull())
+            wifi_sta_ssid = variant["wifi_sta_ssid"].as<String>();
+        if (!variant["wifi_sta_password"].isNull())
+            wifi_sta_password = variant["wifi_sta_password"].as<String>();
     };
 };
 
@@ -126,15 +147,15 @@ struct SensorConfig : BaseConfig
     using BaseConfig::BaseConfig; // Inherit BaseConfig's constructors.
 public:
     // data
-    char name[64] = "Default Sensor";
-    char serial[64] = "";
+    String name = "Default Sensor";
+    String serial = "";
     float fullrange = 100;
     float sensitivity = 1.5;
     float zerobalance = 0.0;
-    char displayunit[16] = "%";
+    String displayunit = "%";
 
     // create doc from data
-    void toJson(StaticJsonDocument<512> &doc) const
+    void toDoc(DynamicJsonDocument &doc) const
     {
         // Set the values in the document
         doc["name"] = name;
@@ -146,14 +167,32 @@ public:
     };
 
     // set data according to doc
-    void fromJson(StaticJsonDocument<512> const &doc)
+    void fromDoc(DynamicJsonDocument const &doc)
     {
         // Copy values from the JsonDocument to the Config
-        strlcpy(name, doc["name"] | name, sizeof(name));
-        strlcpy(serial, doc["serial"] | "", sizeof(serial));
+        name = doc["name"] | name;
+        serial = doc["serial"] | serial;
         fullrange = doc["fullrange"] | fullrange;
         sensitivity = doc["sensitivity"] | sensitivity;
         zerobalance = doc["zerobalance"] | zerobalance;
-        strlcpy(displayunit, doc["displayunit"] | displayunit, sizeof(displayunit));
+        displayunit = doc["displayunit"] | displayunit;
+    };
+
+    // set data according to doc
+    void fromWeb(JsonVariant variant)
+    {
+        // Copy values from the variant to the Config
+        if (!variant["name"].isNull())
+            name = variant["name"].as<String>();
+        if (!variant["serial"].isNull())
+            serial = variant["serial"].as<String>();
+        if (!variant["fullrange"].isNull())
+            fullrange = variant["fullrange"].as<float>();
+        if (!variant["sensitivity"].isNull())
+            sensitivity = variant["sensitivity"].as<float>();
+        if (!variant["zerobalance"].isNull())
+            zerobalance = variant["zerobalance"].as<float>();
+        if (!variant["displayunit"].isNull())
+            displayunit = variant["displayunit"].as<String>();
     };
 };

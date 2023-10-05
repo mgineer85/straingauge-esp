@@ -18,7 +18,7 @@ void SystemClass::initialize()
 
     this->initialize_filesystem();
 
-    system_config.loadConfiguration();
+    this->cbLoadConfiguration();
 
     this->initialize_wifi();
 }
@@ -52,6 +52,9 @@ void SystemClass::initialize_wifi()
     Display::status_message("WiFi setup...");
 
     WiFi.hostname(system_config.hostname);
+
+    if (WiFi.isConnected())
+        WiFi.disconnect();
 
     if (system_config.wifi_ap_mode)
     {
@@ -89,6 +92,22 @@ void SystemClass::initialize_wifi()
     log_i("Hostname: %s", WiFi.getHostname());
 
     Display::status_message("WiFi setup finished.");
+}
+
+void SystemClass::cbSaveConfiguration(void)
+{
+    system_config.saveConfiguration();
+}
+void SystemClass::cbLoadConfiguration(void)
+{
+    system_config.loadConfiguration();
+    postConfigChange();
+}
+void SystemClass::postConfigChange(void)
+{
+    log_i("postConfigChange triggered");
+
+    // do not reinit wifi, since if would disconnect the client - shall only be called on reset or save config initialize_wifi();
 }
 
 void SystemClass::update_loop()

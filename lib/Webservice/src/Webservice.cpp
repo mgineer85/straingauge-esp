@@ -47,8 +47,9 @@ namespace Webservice
     bool cb_api_cmd_save_configuration()
     {
         // send event to inform other modules to action
-        Event ev("*/saveconfiguration");
-        EventManager::instance().publish(ev);
+
+        g_System.cbSaveConfiguration();
+        g_Loadcell.cbSaveConfiguration();
 
         return true;
     }
@@ -56,8 +57,8 @@ namespace Webservice
     bool cb_api_cmd_load_configuration()
     {
         // send event to inform other modules to action
-        Event ev("*/loadconfiguration");
-        EventManager::instance().publish(ev);
+        g_System.cbLoadConfiguration();
+        g_Loadcell.cbLoadConfiguration();
 
         return true;
     }
@@ -80,14 +81,17 @@ namespace Webservice
         return true;
     }
 
-    bool cb_api_config()
-    {
-        return false;
-    }
-
     // simple commands
     void route_api_cmd_init()
     {
+
+        server.on("/api/cmd/restart", HTTP_GET, [](AsyncWebServerRequest *request)
+                  {
+                      log_i("webserver api/cmd/restart triggered");
+                      request->send(200, "text/plain", "OK");
+
+                      ESP.restart(); });
+
         // Send a HTTP_GET request to <IP>/post with a form field message set to <message>
         server.on("/api/cmd/tare", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
@@ -139,75 +143,38 @@ namespace Webservice
 
     // api/config update requests
     void route_api_config_init()
-
     {
-        // server.on("/command", HTTP_POST, [](AsyncWebServerRequest *request, JsonVariant json)
-        //           {
-        //             JsonObject jsonObj = json.as<JsonObject>();
-        //         uint8_t command = jsonObj["C"];
-        //         String response;
-        //         switch(command){
-        //                         case 0:
-        //                             response = "{\"SCAN\":\"received_scan\"}";
-        //                             request -> send(200, "application/json", response);
-        //                         return;
-        //                         case 1: /*...similar stuff */
-        //                             return;
-        //                         case 2: /*...*/
-        //                             return;
-        //     } });
-
-        // AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/api/config", [](AsyncWebServerRequest *request, JsonVariant json)
-        //                                                                        {
-        //                                                                            JsonObject jsonObj = json.as<JsonObject>();
-        //                                                                            Serial.println(jsonObj); });
-        // server.addHandler(handler);
-        server.on("/api/config/test", HTTP_ANY, [](AsyncWebServerRequest *request)
+        server.on("/api/config", HTTP_GET, [](AsyncWebServerRequest *request)
                   {
-            log_i("webserver api/config triggered");
-            int params = request->params();
-            for (int i = 0; i < params; i++)
-            {
-                AsyncWebParameter *p = request->getParam(i);
-                if (p->isFile())
-                { // p->isPost() is also true
-                    log_d("FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
-                }
-                else if (p->isPost())
-                {
-                    log_d("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-                }
-                else
-                {
-                    log_d("GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
-                }
-            }
-            request->send(200, "text/plain", "OK"); });
+            log_i("webserver /api/config triggered");
 
-        server.on("/api/config/sensor", HTTP_GET, [](AsyncWebServerRequest *request)
-                  {
-                    log_i("webserver api/config/system triggered");
+            AsyncResponseStream *response = request->beginResponseStream("application/json");
+            DynamicJsonDocument json(2048);
+            JsonObject system = json.createNestedObject("system");
+            JsonObject loadcell = json.createNestedObject("loadcell");
+            // g_System.system_config.toDoc(system);
+            // g_Loadcell.sensor_config.toDoc(loadcell);
+            serializeJson(json, *response);
+            request->send(response); });
 
-                    g_Loadcell.sensor_config.sensitivity+=0.1;
-                    log_d("sensitivity: %0.5f",g_Loadcell.sensor_config.sensitivity);
-                    //g_Config.printsomevarsfortesting();
+        AsyncCallbackJsonWebHandler *handlerSystemConfig = new AsyncCallbackJsonWebHandler("/api/config/system", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                                                           {
+                                                                                    //POST/PUT/PATCH
+                                                                                    g_System.system_config.fromWeb(json);
 
-                    g_System.printFile(String(CONFIG_DIR) + g_Loadcell.sensor_config._filename);
+                                                                                    String response = "{\"status\":\"OK\"}";
+                                                                                    request -> send(200, "application/json", response); });
+        server.addHandler(handlerSystemConfig);
 
-                    g_Loadcell.cbSaveConfiguration();
+        AsyncCallbackJsonWebHandler *handlerSensorConfig = new AsyncCallbackJsonWebHandler("/api/config/loadcell", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                                                           {
+                                                                                    //POST/PUT/PATCH
+                                                                                    g_Loadcell.sensor_config.fromWeb(json);
+                                                                                    g_Loadcell.postConfigChange();
 
-                    g_System.printDirectory(FFat.open("/"));
-
-                    g_Loadcell.cbLoadConfiguration();
-
-                    request->send(200, "text/plain", "OK"); });
-
-        server.on("/api/cmd/restart", HTTP_GET, [](AsyncWebServerRequest *request)
-                  {
-                      log_i("webserver api/cmd/restart triggered");
-                      request->send(200, "text/plain", "OK");
-
-                      ESP.restart(); });
+                                                                                    String response = "{\"status\":\"OK\"}";
+                                                                                    request -> send(200, "application/json", response); });
+        server.addHandler(handlerSensorConfig);
     }
 
     void route_sse_init()
@@ -227,12 +194,26 @@ namespace Webservice
 
     void route_notfound_init(AsyncWebServerRequest *request)
     {
-        request->send(404, "text/plain", "Not found");
+        // TODO: send json if request is asking for json.
+
+        String response_type = "text/plain";
+        String response_content = "Not found";
+
+        if (request->hasHeader("content-type"))
+        {
+            AsyncWebHeader *h = request->getHeader("content-type");
+
+            if (h->value().equalsIgnoreCase("application/json"))
+            {
+                response_type = "application/json";
+                response_content = "{\"error\":\"not found\"}";
+            }
+        }
+        request->send(404, response_type, response_content);
     }
 
     void routes_init()
     {
-
         route_status_init();
 
         route_api_cmd_init();
