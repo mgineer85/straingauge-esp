@@ -149,12 +149,19 @@ namespace Webservice
             log_i("webserver /api/config triggered");
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonDocument json(2048);
-            JsonObject system = json.createNestedObject("system");
-            JsonObject loadcell = json.createNestedObject("loadcell");
-            // g_System.system_config.toDoc(system);
-            // g_Loadcell.sensor_config.toDoc(loadcell);
-            serializeJson(json, *response);
+
+            DynamicJsonDocument response_json(2048);
+            DynamicJsonDocument system = DynamicJsonDocument(1024);
+            DynamicJsonDocument loadcell = DynamicJsonDocument(1024);
+
+            g_System.system_config.toDoc(system);
+            g_Loadcell.sensor_config.toDoc(loadcell);
+
+            response_json[F("system")] = system;
+            response_json[F("loadcell")] = loadcell;
+
+            serializeJson(response_json, *response);
+
             request->send(response); });
 
         AsyncCallbackJsonWebHandler *handlerSystemConfig = new AsyncCallbackJsonWebHandler("/api/config/system", [](AsyncWebServerRequest *request, JsonVariant json)
