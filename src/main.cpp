@@ -66,8 +66,6 @@ void Task_Display(void *pvParameters)
 {
   (void)pvParameters;
 
-  Display::static_content(); // display static content after init all modules
-
   while (1) // A Task shall never return or exit.
   {
     Display::update_loop();
@@ -164,11 +162,11 @@ void setup()
   xTaskCreatePinnedToCore(Task_Buttons, "Task_Buttons", 4096, NULL, 2, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(Task_Loadcell, "Task_Loadcell", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(Task_Fuelgauge, "Task_Fuelgauge", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
-  xTaskCreatePinnedToCore(Task_Display, "Task_Display", 4096, NULL, 2, NULL, ARDUINO_RUNNING_CORE);
   Webservice::initialize();
 
   Display::status_message("Ready.");
 
+  xTaskCreatePinnedToCore(Task_Display, "Task_Display", 4096, NULL, 2, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(Task_RegularInfoOut, "Task_RegularInfoOut", 4096, NULL, 3, NULL, ARDUINO_RUNNING_CORE);
 }
 
