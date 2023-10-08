@@ -100,7 +100,6 @@ public:
     void toDoc(DynamicJsonDocument &doc) const
     {
         // Set the values in the document
-        Serial.println(doc["hostname"].as<String>());
         doc["hostname"] = hostname;
         doc["wifi_ap_mode"] = wifi_ap_mode;
         doc["wifi_ap_ssid"] = wifi_ap_ssid;
@@ -113,7 +112,6 @@ public:
     void fromDoc(DynamicJsonDocument const &doc)
     {
         // Copy values from the JsonDocument to the Config
-        Serial.println(doc["hostname"].as<String>());
         hostname = doc["hostname"] | hostname;
         wifi_ap_mode = doc["wifi_ap_mode"] | wifi_ap_mode;
         wifi_ap_ssid = doc["wifi_ap_ssid"] | wifi_ap_ssid;

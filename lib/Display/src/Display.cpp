@@ -63,10 +63,6 @@ namespace Display
 
         // Battery Icon Font
         display.setFont(u8g2_font_siji_t_6x10);
-
-        if (g_Fuelgauge.getIsCharging())                            // isCharging
-            display.drawGlyph((display_width - 24), line1, 0xe216); /* Charge Symbol */
-
         display.drawGlyph((display_width - 12), line1 - 1, _symbol); /* Battery Bar */
     }
 
@@ -112,7 +108,8 @@ namespace Display
         sprintf(buf, "%5.0f", g_Loadcell.getReadingDisplayunitFiltered());
         display.drawStr(0, line2, buf);
 
-        draw_battery_icon(g_Fuelgauge.getBatteryPercent());
+        if (g_Fuelgauge.getGaugeAvailable())
+            draw_battery_icon(g_Fuelgauge.getBatteryPercent());
 
         display.sendBuffer();
     }

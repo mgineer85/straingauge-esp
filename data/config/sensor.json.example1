@@ -1,0 +1,8 @@
+{
+  "name": "HALJIA 1kg Weightcell",
+  "serial": "-",
+  "fullrange": 1000,
+  "sensitivity": 1.0,
+  "zerobalance": 0.0,
+  "displayunit": "g"
+}

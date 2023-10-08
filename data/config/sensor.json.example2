@@ -1,0 +1,8 @@
+{
+  "name": "Ama 1000kg S-Loadcell",
+  "serial": "-",
+  "fullrange": 1000,
+  "sensitivity": 2.02929,
+  "zerobalance": -0.00296,
+  "displayunit": "kg"
+}

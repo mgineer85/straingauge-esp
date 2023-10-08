@@ -137,8 +137,6 @@ void Task_RegularInfoOut(void *pvParameters)
     Serial.print(g_Fuelgauge.getBatteryPercent(), 1);
     Serial.print("\t");
     Serial.print(g_Fuelgauge.getChargeRate(), 1);
-    Serial.print("\t");
-    Serial.print(g_Fuelgauge.getIsCharging());
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }

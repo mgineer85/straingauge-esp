@@ -13,51 +13,39 @@ void FuelgaugeClass::initialize()
 
     if (!battery_gauge.begin())
     {
-        log_e("Couldnt find battery fuel gauge chip?\nMake sure a battery is plugged in! Continue regular checks");
-        _batteryConnected = false;
+        log_e("Couldnt find battery fuel gauge chip! Gauge display disabled.");
+        _batteryGaugeAvail = false;
     }
     else
     {
-        _batteryConnected = true;
-
         log_i("Found MAX17048, ID 0x%02hhx", battery_gauge.getChipID());
+        _batteryGaugeAvail = true;
     }
+}
+
+bool FuelgaugeClass::getGaugeAvailable()
+{
+    return _batteryGaugeAvail;
 }
 
 float FuelgaugeClass::getBatteryPercent()
 {
-    return (_batteryConnected) ? _batteryCellPercent : 0.0;
+    return (_batteryGaugeAvail) ? _batteryCellPercent : 0.0;
 }
 
 float FuelgaugeClass::getBatteryVoltage()
 {
-    return (_batteryConnected) ? _batteryVoltage : 0.0;
+    return (_batteryGaugeAvail) ? _batteryVoltage : 0.0;
 }
 
 float FuelgaugeClass::getChargeRate()
 {
-    return (_batteryConnected) ? _chargeRate : 0.0;
-}
-
-bool FuelgaugeClass::getIsCharging()
-{
-    return (_batteryConnected) ? _isCharging : false;
+    return (_batteryGaugeAvail) ? _chargeRate : 0.0;
 }
 
 void FuelgaugeClass::update_loop()
 {
-    if (!_batteryConnected)
-    {
-        if (battery_gauge.begin())
-        {
-            _batteryConnected = true;
-        }
-        else
-        {
-            _batteryConnected = false;
-        }
-    }
-    else
+    if (_batteryGaugeAvail)
     {
         _batteryCellPercent = battery_gauge.cellPercent();
         _batteryCellPercent = _batteryCellPercent < 0 ? 0 : _batteryCellPercent;     // limit to 0%
@@ -66,7 +54,5 @@ void FuelgaugeClass::update_loop()
         _batteryVoltage = battery_gauge.cellVoltage();
 
         _chargeRate = battery_gauge.chargeRate();
-
-        _isCharging = (_chargeRate > 0.0 && _batteryCellPercent < 100) ? true : false;
     }
 }
