@@ -53,42 +53,28 @@ void SystemClass::initialize_wifi()
 
     WiFi.hostname(system_config.hostname);
 
+    log_i("Setup accesspoint WiFi SSID '%s'", system_config.wifi_ap_ssid);
+
     if (WiFi.isConnected())
         WiFi.disconnect();
 
-    if (system_config.wifi_ap_mode)
+    IPAddress ip(192, 168, 22, 1);
+    IPAddress gateway(192, 168, 22, 1);
+    IPAddress subnet(255, 255, 255, 0);
+
+    WiFi.softAPConfig(ip, gateway, subnet);
+
+    if (system_config.wifi_ap_ssid.length() >= 4 && system_config.wifi_ap_password.length() >= 8)
     {
-        log_i("Setup accesspoint WiFi SSID '%s'", system_config.wifi_ap_ssid);
-
-        IPAddress ip(192, 168, 22, 1);
-        IPAddress gateway(192, 168, 22, 1);
-        IPAddress subnet(255, 255, 255, 0);
-        WiFi.softAPConfig(ip, gateway, subnet);
-
-        if (system_config.wifi_ap_ssid.length() >= 4 && system_config.wifi_ap_password.length() >= 8)
-            WiFi.softAP(system_config.wifi_ap_ssid, system_config.wifi_ap_password);
-        else
-            WiFi.softAP("sg-box-failsafe", "12345678"); // invalid config - go failsafe wifi
-
-        log_i("IP-Address: %s", ip.toString().c_str());
+        WiFi.softAP(system_config.wifi_ap_ssid, system_config.wifi_ap_password);
     }
     else
     {
-        log_i("Connect to WiFi '%s'", system_config.wifi_sta_ssid);
-
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(system_config.wifi_sta_ssid, system_config.wifi_sta_password);
-        if (WiFi.waitForConnectResult(10000UL) != WL_CONNECTED)
-        {
-            log_e("WiFi failed!");
-            Display::status_message("WiFi failed! Halted.");
-            while (true)
-                ;
-        }
-
-        log_i("Got IP-Address from WiFi: %s", WiFi.localIP().toString().c_str());
+        log_w("illegal wifi ap config; failsafe AP activated.");
+        WiFi.softAP("sg-box-failsafe", "12345678"); // invalid config - go failsafe wifi
     }
 
+    log_i("IP-Address: %s", ip.toString().c_str());
     log_i("Hostname: %s", WiFi.getHostname());
 
     Display::status_message("WiFi setup finished.");
