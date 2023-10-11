@@ -1,0 +1,8 @@
+{
+  "name": "neutral settings",
+  "serial": "-",
+  "fullrange": 1,
+  "sensitivity": 1.0,
+  "zerobalance": 0.0,
+  "displayunit": "mV/V"
+}

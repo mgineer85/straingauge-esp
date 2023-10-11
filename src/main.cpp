@@ -132,7 +132,7 @@ void Task_RegularInfoOut(void *pvParameters)
     Serial.println();
     Serial.print(g_Loadcell.getReadingRaw());
     Serial.print("\t");
-    Serial.print(g_Loadcell.getReadingDisplayunitFiltered(), 0);
+    Serial.print(g_Loadcell.getReadingDisplayunitFiltered(), 4);
     Serial.print("\t");
     Serial.print(g_Fuelgauge.getBatteryPercent(), 1);
     Serial.print("\t");

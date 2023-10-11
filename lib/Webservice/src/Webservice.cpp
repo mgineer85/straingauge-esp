@@ -151,16 +151,19 @@ namespace Webservice
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-            DynamicJsonDocument response_json(2048);
+            DynamicJsonDocument response_json(3072);
             DynamicJsonDocument system = DynamicJsonDocument(1024);
-            DynamicJsonDocument loadcell = DynamicJsonDocument(1024);
+            DynamicJsonDocument sensor = DynamicJsonDocument(1024);
+            DynamicJsonDocument adc = DynamicJsonDocument(1024);
 
             g_System.system_config.toDoc(system);
-            g_Loadcell.sensor_config.toDoc(loadcell);
+            g_Loadcell.sensor_config.toDoc(sensor);
+            g_Loadcell.adc_config.toDoc(adc);
 
             // https://arduino.stackexchange.com/a/94216
             response_json[F("system")] = system;
-            response_json[F("loadcell")] = loadcell;
+            response_json[F("sensor")] = sensor;
+            response_json[F("adc")] = adc;
 
             serializeJson(response_json, *response);
 
@@ -171,31 +174,13 @@ namespace Webservice
                                                                                   {
                                                                                     
                                                                                     g_System.system_config.fromWeb(json["system"]);
-                                                                                    g_Loadcell.sensor_config.fromWeb(json["loadcell"]);
+                                                                                    g_Loadcell.sensor_config.fromWeb(json["sensor"]);
+                                                                                    g_Loadcell.adc_config.fromWeb(json["adc"]);
                                                                                     g_Loadcell.postConfigChange();
 
                                                                                     String response = "{\"status\":\"OK\"}";
                                                                                     request -> send(200, "application/json", response); });
         server.addHandler(handlerCfg);
-
-        // AsyncCallbackJsonWebHandler *handlerSystemConfig = new AsyncCallbackJsonWebHandler("/api/config/system", [](AsyncWebServerRequest *request, JsonVariant json)
-        //                                                                                    {
-        //                                                                             //POST/PUT/PATCH
-        //                                                                             g_System.system_config.fromWeb(json);
-
-        //                                                                             String response = "{\"status\":\"OK\"}";
-        //                                                                             request -> send(200, "application/json", response); });
-        // server.addHandler(handlerSystemConfig);
-
-        // AsyncCallbackJsonWebHandler *handlerSensorConfig = new AsyncCallbackJsonWebHandler("/api/config/loadcell", [](AsyncWebServerRequest *request, JsonVariant json)
-        //                                                                                    {
-        //                                                                             //POST/PUT/PATCH
-        //                                                                             g_Loadcell.sensor_config.fromWeb(json);
-        //                                                                             g_Loadcell.postConfigChange();
-
-        //                                                                             String response = "{\"status\":\"OK\"}";
-        //                                                                             request -> send(200, "application/json", response); });
-        // server.addHandler(handlerSensorConfig);
     }
 
     void route_sse_init()

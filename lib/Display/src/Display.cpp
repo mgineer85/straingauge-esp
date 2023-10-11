@@ -43,7 +43,7 @@ namespace Display
     void status_message(String message)
     {
         display.clearBuffer();                                     // clear the internal memory
-        display.setFont(u8g2_font_ncenB08_tr);                     // choose a suitable font
+        display.setFont(u8g2_font_spleen5x8_mr);                   // choose a suitable font
         display.drawStr(0, (display_height - 8), message.c_str()); // write something to the internal memory
         display.sendBuffer();                                      // transfer internal memory to the display
 
@@ -80,33 +80,30 @@ namespace Display
         line4: -8: statusmessage (up to 2 secs)
         */
 
-        display.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
+        display.setFont(u8g2_font_spleen5x8_mr); // choose a suitable font
 
         // displayunit unit
         display.drawStr(0, line1, (String("[") + String(g_Loadcell.sensor_config.displayunit) + String("]")).c_str());
         // fullrange
-        display.drawStr(60, line1, (String(g_Loadcell.sensor_config.fullrange, 1) + String(g_Loadcell.sensor_config.displayunit)).c_str());
+        display.drawStr(60, line1, String(g_Loadcell.sensor_config.fullrange, 0).c_str());
 
-        // sensitivity
-        display.drawStr(0, line3, String(g_Loadcell.sensor_config.sensitivity, 5).c_str());
-        // zerobalance
-        display.drawStr(64, line3, String(g_Loadcell.sensor_config.zerobalance, 5).c_str());
+        // sensitivity, always 4 digits
+        display.drawStr(0, line4, String(g_Loadcell.sensor_config.sensitivity, 4).c_str());
+        // zerobalance, always 4 digits
+        display.drawStr(64, line4, String(g_Loadcell.sensor_config.zerobalance, 4).c_str());
     }
 
     void update_loop()
     {
-        char buf[10];
+        char buf[16];
+        const int numberdigits = 4;
 
-        // if ((millis() - lastMillisStatusMessage) > 2000)
-        // {
-        //     // clear last status message if older than xxxx milliseconds
-        // }
         static_content();
 
         // value in displayunit
-        display.setFont(u8g2_font_inr24_mn); // choose a suitable font
-        sprintf(buf, "%5.0f", g_Loadcell.getReadingDisplayunitFiltered());
-        display.drawStr(0, line2, buf);
+        display.setFont(u8g2_font_spleen16x32_mn); // choose a suitable font
+        sprintf(buf, "%2.*f", numberdigits, g_Loadcell.getReadingDisplayunitFiltered());
+        display.drawStr(display_width - display.getStrWidth(buf), line2, buf);
 
         if (g_Fuelgauge.getGaugeAvailable())
             draw_battery_icon(g_Fuelgauge.getBatteryPercent());

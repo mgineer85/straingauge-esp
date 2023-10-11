@@ -64,25 +64,30 @@ void LoadcellClass::initialize(void)
 void LoadcellClass::cbSaveConfiguration(void)
 {
     sensor_config.saveConfiguration();
+    adc_config.saveConfiguration();
 }
 void LoadcellClass::cbLoadConfiguration(void)
 {
     sensor_config.loadConfiguration();
+    adc_config.loadConfiguration();
     postConfigChange();
 }
 void LoadcellClass::postConfigChange(void)
 {
     log_i("postConfigChange triggered");
 
-    sensor_scale_factor = ((float)adc_resolution * (float)(1 << gain) * (sensor_config.sensitivity)) / (1000.0 * sensor_config.fullrange);
-    sensor_zero_balance_raw = (int)round(sensor_config.zerobalance * (float)adc_resolution * (float)(1 << gain) / 1000.0);
+    sensor_scale_factor = ((float)adc_resolution * (float)(1 << adc_config.gain) * ((sensor_config.sensitivity * adc_config.cali_gain_factor))) / (1000.0 * sensor_config.fullrange);
+    sensor_zero_balance_raw = (int)((sensor_config.zerobalance - adc_config.cali_offset) * (float)adc_resolution * (float)(1 << adc_config.gain) / 1000.0);
 
     log_i("sensor_scale_factor: %0.2f", sensor_scale_factor);
     log_i("sensor_zero_balance_raw: %i", sensor_zero_balance_raw);
 
-    nau7802_adc.setRate(sample_rate);
-    nau7802_adc.setGain(gain);
-    nau7802_adc.setLDO(ldo_voltage);
+    log_i("adc setRate %i", adc_config.samplerate);
+    nau7802_adc.setRate(adc_config.samplerate);
+    log_i("adc setGain %i", adc_config.gain);
+    nau7802_adc.setGain(adc_config.gain);
+    log_i("adc setLDO %i", adc_config.ldovoltage);
+    nau7802_adc.setLDO(adc_config.ldovoltage);
 
     // Take 4 readings to flush out readings
     for (uint8_t i = 0; i < 4; i++)
@@ -94,9 +99,9 @@ void LoadcellClass::postConfigChange(void)
 
     // Re-cal analog front end when we change gain, sample rate, or channel
     if (!nau7802_adc.calibrate(NAU7802_CALMOD_INTERNAL))
-        log_e("internal ADC calibration failed!");
+        log_e("NAU7802_CALMOD_INTERNAL calibration failed!");
     else
-        log_i("internal ADC calibration successful.");
+        log_i("NAU7802_CALMOD_INTERNAL calibration successful.");
 }
 
 // getter for external readout
