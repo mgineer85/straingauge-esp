@@ -102,7 +102,7 @@ namespace Display
 
         // value in displayunit
         display.setFont(u8g2_font_spleen16x32_mn); // choose a suitable font
-        sprintf(buf, "%2.*f", numberdigits, g_Loadcell.getReadingDisplayunitFiltered());
+        sprintf(buf, "%2.*f", g_Loadcell.sensor_config.digits, g_Loadcell.getReadingDisplayunitFiltered());
         display.drawStr(display_width - display.getStrWidth(buf), line2, buf);
 
         if (g_Fuelgauge.getGaugeAvailable())

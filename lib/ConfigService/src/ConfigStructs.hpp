@@ -145,6 +145,7 @@ public:
     float sensitivity = 1.0;
     float zerobalance = 0.0;
     String displayunit = "mV/V";
+    uint8_t digits = 4;
 
     // create doc from data
     void toDoc(DynamicJsonDocument &doc) const
@@ -156,6 +157,7 @@ public:
         doc["sensitivity"] = sensitivity;
         doc["zerobalance"] = zerobalance;
         doc["displayunit"] = displayunit;
+        doc["digits"] = digits;
     };
 
     // set data according to doc
@@ -168,6 +170,7 @@ public:
         sensitivity = doc["sensitivity"] | sensitivity;
         zerobalance = doc["zerobalance"] | zerobalance;
         displayunit = doc["displayunit"] | displayunit;
+        digits = doc["digits"] | digits;
     };
 
     // set data according to doc
@@ -186,6 +189,8 @@ public:
             zerobalance = variant["zerobalance"].as<float>();
         if (!variant["displayunit"].isNull())
             displayunit = variant["displayunit"].as<String>();
+        if (!variant["digits"].isNull())
+            digits = variant["digits"].as<uint8_t>();
     };
 };
 
