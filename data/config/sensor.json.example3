@@ -1,0 +1,9 @@
+{
+  "name": "Burster 8524-6010",
+  "serial": "556959",
+  "fullrange": 10000,
+  "sensitivity": 1.5005,
+  "zerobalance": -0.0097,
+  "displayunit": "N",
+  "digits": 1
+}
