@@ -76,6 +76,9 @@ void LoadcellClass::postConfigChange(void)
 {
     log_i("postConfigChange triggered");
 
+    // reset average
+    _readingDisplayunitFiltered.clear();
+
     sensor_scale_factor = ((float)adc_resolution * (float)(1 << adc_config.gain) * ((sensor_config.sensitivity * adc_config.cali_gain_factor))) / (1000.0 * sensor_config.fullrange);
     sensor_zero_balance_raw = (int)((sensor_config.zerobalance - adc_config.cali_offset) * (float)adc_resolution * (float)(1 << adc_config.gain) / 1000.0);
 
@@ -98,6 +101,7 @@ void LoadcellClass::postConfigChange(void)
     }
 
     // Re-cal analog front end when we change gain, sample rate, or channel
+    // removes internal offset and gain error.
     if (!nau7802_adc.calibrate(NAU7802_CALMOD_INTERNAL))
         log_e("NAU7802_CALMOD_INTERNAL calibration failed!");
     else
