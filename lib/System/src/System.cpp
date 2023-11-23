@@ -53,7 +53,7 @@ void SystemClass::initialize_wifi()
 
     WiFi.hostname(system_config.hostname);
 
-    log_i("Setup accesspoint WiFi SSID '%s'", system_config.wifi_ap_ssid);
+    log_i("Setup accesspoint WiFi SSID '%s'", system_config.wifi_ap_ssid.c_str());
 
     if (WiFi.isConnected())
         WiFi.disconnect();
