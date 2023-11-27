@@ -124,9 +124,9 @@ void Task_RegularInfoOut(void *pvParameters)
   {
     // events + data
     Webservice::invokeSendEvent("ping", String(millis()));
-    Webservice::invokeSendEvent("reading", String(g_Loadcell.getReadingRaw()));
-    Webservice::invokeSendEvent("force", String(g_Loadcell.getReadingDisplayunitFiltered(), 0));
     Webservice::invokeSendEvent("battery", String(g_Fuelgauge.getBatteryPercent(), 1));
+    Webservice::invokeSendEvent("reading", String(g_Loadcell.getReadingRaw()));
+    Webservice::invokeSendEvent("reading_displayunit", String(g_Loadcell.getReadingDisplayunitFiltered(), (int)g_Loadcell.sensor_config.digits));
 
     // send debug information
     Serial.println();
