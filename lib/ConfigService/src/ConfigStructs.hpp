@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <FFat.h>
 #include <ArduinoJson.h>
-#include "Adafruit_NAU7802.h"
+#include <Ads1220lib.h>
 
 struct BaseConfig
 {
@@ -90,7 +90,6 @@ public:
 public:
     String hostname = "sg-box";
 
-    bool wifi_ap_mode = true; // if true: AP mode, otherwise STA mode
     String wifi_ap_ssid = "sg-box-spot";
     String wifi_ap_password = "12345678";
 
@@ -101,7 +100,6 @@ public:
     {
         // Set the values in the document
         doc["hostname"] = hostname;
-        doc["wifi_ap_mode"] = wifi_ap_mode;
         doc["wifi_ap_ssid"] = wifi_ap_ssid;
         doc["wifi_ap_password"] = wifi_ap_password;
         doc["serial"] = serial;
@@ -112,7 +110,6 @@ public:
     {
         // Copy values from the JsonDocument to the Config
         hostname = doc["hostname"] | hostname;
-        wifi_ap_mode = doc["wifi_ap_mode"] | wifi_ap_mode;
         wifi_ap_ssid = doc["wifi_ap_ssid"] | wifi_ap_ssid;
         wifi_ap_password = doc["wifi_ap_password"] | wifi_ap_password;
         serial = doc["serial"] | serial;
@@ -123,8 +120,6 @@ public:
         // Copy values from the variant to the Config
         if (!variant["hostname"].isNull())
             hostname = variant["hostname"].as<String>();
-        if (!variant["wifi_ap_mode"].isNull())
-            wifi_ap_mode = variant["wifi_ap_mode"].as<bool>();
         if (!variant["wifi_ap_ssid"].isNull())
             wifi_ap_ssid = variant["wifi_ap_ssid"].as<String>();
         if (!variant["wifi_ap_password"].isNull())
@@ -199,9 +194,10 @@ struct AdcConfig : BaseConfig
     using BaseConfig::BaseConfig; // Inherit BaseConfig's constructors.
 public:
     // data
-    NAU7802_LDOVoltage ldovoltage = NAU7802_3V0;
-    NAU7802_Gain gain = NAU7802_GAIN_128;
-    NAU7802_SampleRate samplerate = NAU7802_RATE_10SPS;
+    ADS1220_GAIN_Values gain = ADS1220_GAIN_128;
+    ADS1220_MODE_Values mode = ADS1220_MODE_TURBO;
+    ADS1220_DR_Values datarate = ADS1220_DR_NORMAL20_DUTY5_TURBO40;
+    uint16_t averagereadings = 4;
     float cali_offset = 0.0;
     float cali_gain_factor = 1.0;
 
@@ -209,9 +205,10 @@ public:
     void toDoc(DynamicJsonDocument &doc) const
     {
         // Set the values in the document
-        doc["ldovoltage"] = ldovoltage;
         doc["gain"] = gain;
-        doc["samplerate"] = samplerate;
+        doc["mode"] = mode;
+        doc["datarate"] = datarate;
+        doc["averagereadings"] = averagereadings;
         doc["cali_offset"] = cali_offset;
         doc["cali_gain_factor"] = cali_gain_factor;
     };
@@ -220,9 +217,10 @@ public:
     void fromDoc(DynamicJsonDocument const &doc)
     {
         // Copy values from the JsonDocument to the Config
-        ldovoltage = doc["ldovoltage"] | ldovoltage;
         gain = doc["gain"] | gain;
-        samplerate = doc["samplerate"] | samplerate;
+        mode = doc["mode"] | mode;
+        datarate = doc["datarate"] | datarate;
+        averagereadings = doc["averagereadings"] | averagereadings;
         cali_offset = doc["cali_offset"] | cali_offset;
         cali_gain_factor = doc["cali_gain_factor"] | cali_gain_factor;
     };
@@ -231,12 +229,14 @@ public:
     void fromWeb(JsonVariant variant)
     {
         // Copy values from the variant to the Config
-        if (!variant["ldovoltage"].isNull())
-            ldovoltage = variant["ldovoltage"].as<NAU7802_LDOVoltage>();
         if (!variant["gain"].isNull())
-            gain = variant["gain"].as<NAU7802_Gain>();
-        if (!variant["samplerate"].isNull())
-            samplerate = variant["samplerate"].as<NAU7802_SampleRate>();
+            gain = variant["gain"].as<ADS1220_GAIN_Values>();
+        if (!variant["mode"].isNull())
+            mode = variant["mode"].as<ADS1220_MODE_Values>();
+        if (!variant["datarate"].isNull())
+            datarate = variant["datarate"].as<ADS1220_DR_Values>();
+        if (!variant["averagereadings"].isNull())
+            averagereadings = variant["averagereadings"].as<uint16_t>();
         if (!variant["cali_offset"].isNull())
             cali_offset = variant["cali_offset"].as<float>();
         if (!variant["cali_gain_factor"].isNull())
