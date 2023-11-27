@@ -1,6 +1,6 @@
 #pragma once
 
-#define AVG_SIZE 8
+#define AVG_SIZE 4
 #define ADC_RESOLUTION 24
 
 #include <Arduino.h>
